@@ -1,17 +1,22 @@
-this sucks
+# PACT - Visualization Tool
 
-# neutralinojs-minimal
+## Installation instructions
 
-The default template for a Neutralinojs app. It's possible to use your favorite frontend framework by using [these steps](https://neutralino.js.org/docs/getting-started/using-frontend-libraries).
+Run the following commands in the terminal when in the project directory:
 
-## Contributors
+```
+npm install
+```
 
-[![Contributors](https://contrib.rocks/image?repo=neutralinojs/neutralinojs-minimal)](https://github.com/neutralinojs/neutralinojs-minimal/graphs/contributors)
+```
+npm i -g @neutralinojs/neu
+```
 
-## License
+```
+neu update
+```
 
-[MIT](LICENSE)
+```
+neu run
+```
 
-## Icon credits
-
-- `trayIcon.png` - Made by [Freepik](https://www.freepik.com) and downloaded from [Flaticon](https://www.flaticon.com)
