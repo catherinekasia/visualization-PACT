@@ -46,8 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let transform = d3.zoomIdentity;
 
         // D3 Projection
-        const projection = d3.geoEqualEarth()
-            .scale(width / 1.8 / Math.PI)
+        const projection = d3.geoMercator()
+            .scale((width) / (2 * Math.PI))
             .translate([width / 2, height / 2]);
 
         const path = d3.geoPath()
@@ -67,15 +67,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Resize handler
         function resize() {
+
             width = canvas.parentElement.clientWidth;
             height = canvas.parentElement.clientHeight;
             canvas.width = width;
             canvas.height = height;
 
-            // Update projection to fit new size
+            // Update projection to fit new size (Mercator)
+            // World longitude: -180 to 180, latitude: -85 to 85 (Mercator limits)
+            const mercatorWidth = width;
+            const mercatorHeight = height;
+            const scale = Math.min(
+                mercatorWidth / (2 * Math.PI),
+                mercatorHeight / (Math.PI)
+            );
             projection
-                .scale(width / 1.8 / Math.PI)
-                .translate([width / 2, height / 2]);
+                .scale(scale)
+                .translate([mercatorWidth / 2, mercatorHeight / 2]);
 
             requestDraw();
         }
@@ -142,17 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Drawing
         function draw() {
+
             context.save();
             context.clearRect(0, 0, width, height);
 
-            // Background (Ocean)
-            context.fillStyle = '#0f172a';
-            context.fillRect(0, 0, width, height);
-
-            context.beginPath();
-            path({ type: "Sphere" });
+            // Flat Background (Ocean)
             context.fillStyle = '#1e293b';
-            context.fill();
+            context.fillRect(0, 0, width, height);
 
             context.save();
             // Apply Zoom Transform
@@ -196,6 +200,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         // Zoom Behavior
+
+        function updateZoomBounds() {
+            // Project the world bounds to screen coordinates
+            // Mercator projection: longitude -180 to 180, latitude -85 to 85
+            const topLeft = projection([-180, 85]);
+            const bottomRight = projection([180, -85]);
+            // Fallback if projection returns undefined
+            const x0 = topLeft ? topLeft[0] : 0;
+            const y0 = topLeft ? topLeft[1] : 0;
+            const x1 = bottomRight ? bottomRight[0] : width;
+            const y1 = bottomRight ? bottomRight[1] : height;
+
+            zoom
+                .translateExtent([[x0, y0], [x1, y1]])
+                .extent([[0, 0], [width, height]]);
+        }
+
         const zoom = d3.zoom()
             .scaleExtent([1, 8])
             .on('zoom', (event) => {
@@ -203,11 +224,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 requestDraw();
             });
 
+        updateZoomBounds();
         d3.select(canvas)
             .call(zoom)
             .on('dblclick.zoom', null); // Disable double click zoom
 
+        // Update zoom bounds on resize
+        window.addEventListener('resize', updateZoomBounds);
+
         // Mouse Move (Hover)
+        let lastHovered = null;
         d3.select(canvas).on('mousemove', (event) => {
             const [x, y] = d3.pointer(event);
             const invertedX = (x - transform.x) / transform.k;
@@ -216,8 +242,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const found = countries.find(feature => d3.geoContains(feature, [lon, lat]));
 
-            if (found !== hoveredCountry) {
+            if (found !== lastHovered) {
                 hoveredCountry = found;
+                lastHovered = found;
                 requestDraw();
                 canvas.style.cursor = found ? 'pointer' : 'default';
             }
@@ -226,13 +253,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Click Handling
         d3.select(canvas).on('click', (event) => {
             const [x, y] = d3.pointer(event);
-
-            // Inverse transform to get map coordinates
             const invertedX = (x - transform.x) / transform.k;
             const invertedY = (y - transform.y) / transform.k;
             const [lon, lat] = projection.invert([invertedX, invertedY]);
 
-            // Find clicked country
             let clicked = hoveredCountry;
             if (!clicked) {
                 clicked = countries.find(feature => d3.geoContains(feature, [lon, lat]));
@@ -242,6 +266,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedCountry = clicked;
                 requestDraw();
                 openPopup(clicked);
+
+                // Zoom into country
+                // Get bounds in screen coordinates
+                const bounds = path.bounds(clicked);
+                const dx = bounds[1][0] - bounds[0][0];
+                const dy = bounds[1][1] - bounds[0][1];
+                const centerX = (bounds[0][0] + bounds[1][0]) / 2;
+                const centerY = (bounds[0][1] + bounds[1][1]) / 2;
+                // Calculate scale (max 8, min 1)
+                const scale = Math.max(1, Math.min(8, 0.8 / Math.max(dx / width, dy / height)));
+                // Calculate translate
+                const translate = [width / 2 - scale * centerX, height / 2 - scale * centerY];
+                // Animate zoom
+                d3.select(canvas)
+                    .transition()
+                    .duration(750)
+                    .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
             } else {
                 selectedCountry = null;
                 requestDraw();
