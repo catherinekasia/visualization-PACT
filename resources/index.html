@@ -8,6 +8,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"
+      }
+    }
+    </script>
 </head>
 
 <body>
@@ -376,7 +384,10 @@
     <div class="modal-content">
       <button id="close-modal" class="close-btn">&times;</button>
       <div class="modal-header">
-        <h2 id="modal-country-name">Country Name</h2>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img id="modal-country-flag" src="" alt="Flag" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid #b6c2e2;box-shadow:0 2px 8px #0003;" />
+          <h2 id="modal-country-name">Country Name</h2>
+        </div>
         <div class="happiness-score">
           <span class="score-label">Happiness Index</span>
           <span id="modal-happiness-val" class="score-value">--</span>

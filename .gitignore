@@ -6,12 +6,15 @@
 /dist
 /.tmp
 
+/resources/dist
+
+/node_modules
+
 # Neutralinojs client (minified)
 neutralino.js
 
 # Neutralinojs related files
 .storage
 *.log
-
 
 .DS_Store
