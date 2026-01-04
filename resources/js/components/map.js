@@ -166,6 +166,18 @@ function initMap(canvas, initialCountries, onCountrySelected) {
 
     // Resize handler
     function resize() {
+        // Preserve current geographic center so resize doesn't shift view
+        let centerLonLat = null;
+        try {
+            const screenCenterX = width / 2;
+            const screenCenterY = height / 2;
+            const invX = (screenCenterX - transform.x) / transform.k;
+            const invY = (screenCenterY - transform.y) / transform.k;
+            centerLonLat = projection.invert([invX, invY]);
+        } catch (e) {
+            centerLonLat = null;
+        }
+
         width = canvas.parentElement.clientWidth;
         height = canvas.parentElement.clientHeight;
         canvas.width = width;
@@ -182,6 +194,18 @@ function initMap(canvas, initialCountries, onCountrySelected) {
         projection
             .scale(scale)
             .translate([mercatorWidth / 2, mercatorHeight / 2]);
+
+        // If we had a geographic center, compute its new projected position
+        // and adjust the current transform so the same lon/lat stays centered.
+        if (centerLonLat) {
+            const p = projection(centerLonLat);
+            if (p && p.length === 2) {
+                const tx = (width / 2) - transform.k * p[0];
+                const ty = (height / 2) - transform.k * p[1];
+                transform = d3.zoomIdentity.translate(tx, ty).scale(transform.k);
+                d3.select(canvas).call(zoom.transform, transform);
+            }
+        }
 
         preRenderBaseMap();
         updateZoomBounds();
