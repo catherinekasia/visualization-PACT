@@ -1,7 +1,12 @@
 let modal = null;
 let closeBtn = null;
+let onCloseDeselect = null;
 
 function initPopup() {
+    // Accept an optional deselect callback when initializing
+    const args = Array.from(arguments);
+    onCloseDeselect = args[0] || null;
+
     modal = document.getElementById('country-modal');
     closeBtn = document.getElementById('close-modal');
 
@@ -107,6 +112,8 @@ function openPopup(feature, economyData, demographicsData, commData, energyData)
 function closePopup() {
     if (!modal) return;
     modal.classList.remove('active');
+    // Notify map (or other) to clear selection
+    try { if (typeof onCloseDeselect === 'function') onCloseDeselect(); } catch (e) { console.error(e); }
     setTimeout(() => {
         modal.style.display = 'none';
     }, 300);

@@ -267,5 +267,10 @@ function initMap(canvas, initialCountries, onCountrySelected) {
             preRenderBaseMap();
         },
         resize,
+        // Clear the currently selected country and redraw
+        deselect: () => {
+            selectedCountry = null;
+            requestDraw();
+        },
     };
 }

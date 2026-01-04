@@ -2,19 +2,19 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Data | Visualization-PACT</title>
+  <title>Three.js Test | Visualization-PACT</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"
-        }
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"
       }
-    </script>
+    }
+  </script>
 </head>
 <body>
   <div class="centered-bg">
@@ -26,7 +26,7 @@
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
             </span>
           </a>
-          <a class="nav-item active" href="data.html" title="Data">
+          <a class="nav-item" href="data.html" title="Data">
             <span class="nav-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="6" height="8"/><rect x="9" y="8" width="6" height="12"/><rect x="15" y="4" width="6" height="16"/></svg>
             </span>
@@ -36,14 +36,45 @@
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </span>
           </a>
+          <a class="nav-item active" href="threejs.html" title="ThreeJS">
+            <span class="nav-icon">
+              <!-- simple cube icon -->
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a1 1 0 0 0-.55-.89l-8-4a1 1 0 0 0-.9 0l-8 4A1 1 0 0 0 3 8v8a1 1 0 0 0 .55.89l8 4a1 1 0 0 0 .9 0l8-4A1 1 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </span>
+          </a>
         </nav>
       </aside>
       <section class="map-section-modern" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
-        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <h1 style="color:#b6c2e2;font-family:Inter,sans-serif;font-size:2.2rem;">Data Page — content coming soon</h1>
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+          <h1 style="color:#b6c2e2;font-family:Inter,sans-serif;font-size:2.2rem;">Three.js Test Page</h1>
+          <canvas id="three-canvas" style="display:block;width:640px;height:420px;background:#181f2a;border-radius:8px;"></canvas>
+        </div>
       </section>
     </div>
-    <!-- Three.js moved to threejs.html -->
+    <script type="module">
+      import * as THREE from "three";
+      const canvas = document.getElementById("three-canvas");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(640, 420);
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x181f2a);
+      const camera = new THREE.PerspectiveCamera(75, 640/420, 0.1, 1000);
+      camera.position.z = 3;
+      const geometry = new THREE.BoxGeometry();
+      const material = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
+      const cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(2, 2, 5);
+      scene.add(light);
+      function animate() {
+        requestAnimationFrame(animate);
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+        renderer.render(scene, camera);
+      }
+      animate();
+    </script>
   </div>
 </body>
 </html>

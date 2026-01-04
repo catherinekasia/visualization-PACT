@@ -1,5 +1,6 @@
 function loadAttributeData(callback) {
-    Promise.all([
+    // Return a Promise so callers can `await` or use callbacks for backward-compatibility
+    const p = Promise.all([
         Neutralino.filesystem.readFile('data/economy_data.csv').then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile('data/demographics_data.csv').then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile('data/communications_data.csv').then(data => d3.csvParse(data)),
@@ -32,12 +33,17 @@ function loadAttributeData(callback) {
         });
 
         console.log('Attribute data loaded');
-        callback(null, { economyData, demographicsData, commData, energyData, transData });
+        const result = { economyData, demographicsData, commData, energyData, transData };
+        if (typeof callback === 'function') callback(null, result);
+        return result;
     }).catch(err => {
         console.error('Error loading attribute data:', err);
-        Neutralino.os.showMessageBox('Warning', 'Failed to load some attribute data. The map will still work, but details may be missing.', 'WARNING');
-        callback(err);
+        try { Neutralino.os.showMessageBox('Warning', 'Failed to load some attribute data. The map will still work, but details may be missing.', 'WARNING'); } catch(e){}
+        if (typeof callback === 'function') callback(err);
+        throw err;
     });
+
+    return p;
 }
 
 function loadMapData(callback) {

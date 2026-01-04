@@ -48,23 +48,47 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        appState.map = initMap(canvas, [], onCountrySelected);
-        initPopup();
-
-        loadMapData((err, mapData) => {
-            if (err) return;
-            appState.countries = mapData;
-            appState.map.updateCountries(mapData);
-
-            loadAttributeData((err, attributeData) => {
-                if (err) return;
-                appState.economyData = attributeData.economyData;
-                appState.demographicsData = attributeData.demographicsData;
-                appState.commData = attributeData.commData;
-                appState.energyData = attributeData.energyData;
-                appState.transData = attributeData.transData;
+        // Only initialize map-related features on the homepage
+        const isHome = /index\.html?$/.test(window.location.pathname) || window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
+        if (isHome) {
+            appState.map = initMap(canvas, [], onCountrySelected);
+            // Initialize popup and pass a callback so closing the modal deselects the map
+            initPopup(() => {
+                if (appState.map && typeof appState.map.deselect === 'function') {
+                    appState.map.deselect();
+                }
             });
-        });
+
+            // Load map data first (needed for rendering). Attributes are heavier; load them lazily.
+            loadMapData((err, mapData) => {
+                if (err) return;
+                appState.countries = mapData;
+                appState.map.updateCountries(mapData);
+
+                // Defer attribute loading to idle time so initial UI stays snappy.
+                const loadAttributes = () => {
+                    loadAttributeData().then(attributeData => {
+                        appState.economyData = attributeData.economyData;
+                        appState.demographicsData = attributeData.demographicsData;
+                        appState.commData = attributeData.commData;
+                        appState.energyData = attributeData.energyData;
+                        appState.transData = attributeData.transData;
+                    }).catch(err => {
+                        // already logged in loader
+                    });
+                };
+
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(loadAttributes, {timeout: 2000});
+                } else {
+                    // Fallback: slight timeout
+                    setTimeout(loadAttributes, 1000);
+                }
+            });
+        } else {
+            // Not home page: don't initialize map or load heavy data
+            console.log('Not homepage — skipping map initialization.');
+        }
 
         window.addEventListener('resize', () => {
             if (appState.map) {
