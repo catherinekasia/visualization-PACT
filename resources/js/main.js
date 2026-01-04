@@ -52,6 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const isHome = /index\.html?$/.test(window.location.pathname) || window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
         if (isHome) {
             appState.map = initMap(canvas, [], onCountrySelected);
+            // Default to Europe view
+            // centerLon, centerLat, scale
+            // Call slightly after initialization to ensure projection/resizing applied
+            setTimeout(() => {
+                if (appState.map && typeof appState.map.setView === 'function') {
+                    appState.map.setView(10, 50, 3, 0);
+                }
+            }, 50);
             // Initialize popup and pass a callback so closing the modal deselects the map
             initPopup(() => {
                 if (appState.map && typeof appState.map.deselect === 'function') {
@@ -85,6 +93,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(loadAttributes, 1000);
                 }
             });
+
+                // Region buttons
+                const btnEurope = document.getElementById('btn-europe');
+                const btnAmerica = document.getElementById('btn-america');
+                const btnEastAsia = document.getElementById('btn-eastasia');
+                const btnAusNz = document.getElementById('btn-ausnz');
+                const resetBtn = document.getElementById('reset-map-btn');
+
+                if (btnEurope) btnEurope.addEventListener('click', () => { appState.map.setView(10, 50, 3); });
+                if (btnAmerica) btnAmerica.addEventListener('click', () => { appState.map.setView(-100, 20, 2.2); });
+                if (btnEastAsia) btnEastAsia.addEventListener('click', () => { appState.map.setView(135, 35, 4); });
+                if (btnAusNz) btnAusNz.addEventListener('click', () => { appState.map.setView(135, -25, 3.5); });
+                // Reset button behavior is handled inside `map.js` (world view)
         } else {
             // Not home page: don't initialize map or load heavy data
             console.log('Not homepage — skipping map initialization.');

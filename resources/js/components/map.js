@@ -18,6 +18,40 @@ function initMap(canvas, initialCountries, onCountrySelected) {
         .scale(width / (2 * Math.PI))
         .translate([width / 2, height / 2]);
 
+    // Countries we want to visually de-emphasize and make non-interactive
+    // (Africa, Asia, Oceania, South America, Central America, Antarctica)
+    // list uses ISO3166-1 Alpha-2 codes.
+    const disabledIso2 = new Set([
+        // Africa
+        'DZ','AO','BJ','BW','BF','BI','CM','CV','CF','TD','KM','CG','CD','CI','DJ','EG','GQ','ER','ET','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MU','MA','MZ','NA','NE','NG','RW','ST','SN','SC','SL','SO','ZA','SS','SD','SZ','TZ','TG','TN','UG','EH','ZM','ZW',
+        // Asia 
+        'AF','AM','AZ','BH','BD','BT','BN','KH','CN','CY','GE','IN','ID','IR','IQ','IL','JO','KZ','KW','KG','LA','LB','MY','MV','MN','MM','NP','KP','OM','PK','PS','PH','QA','SA','SG','LK','SY','TJ','TH','TL','TM','AE','UZ','VN','YE',
+        // Oceania
+        'FJ','PG','SB','VU','NC','PF','KI','TO','WS','MH','FM','NR','TV','GU',
+        // South America
+        'AR','BO','BR','CL','CO','EC','GY','PE','PY','SR','UY','VE','GF','FK',
+        // Central America (exclude Mexico)
+        'BZ','CR','SV','GT','HN','NI','PA',
+        // Antarctica
+        'AQ',
+        // Caribbean (islands and territories)
+        'AI','AW','BS','BB','BM','CW','DM','DO','GD','GP','GY','HT','JM','KN','LC','MQ','MS','PR','SX','TC','TT','VC','VG','VI','BQ','BL','MF','CU'
+    ]);
+
+    // fixes for countries idk codes for
+    const disabledNames = new Set([
+        'SOMALILAND', 'ANTIGUA AND BARBUDA', 'CAYMAN ISLANDS', 'BAYKONUR COSMODROME', 'NORTHERN CYPRUS', "SOUTH GEORGIA AND THE ISLANDS", 'FRENCH SOUTHERN AND ANTARCTIC LANDS', 'HEARD ISLAND AND MCDONALD ISLANDS', 'FAROE ISLANDS', 'ALAND'
+    ]);
+
+    function isDisabledCountry(feature) {
+        if (!feature || !feature.properties) return false;
+        const iso = (feature.properties['ISO3166-1-Alpha-2'] || feature.properties.ISO_A2 || feature.properties.iso_a2 || '').toUpperCase();
+        if (iso && disabledIso2.has(iso)) return true;
+        const name = (feature.properties.name || '').toUpperCase();
+        if (name && disabledNames.has(name)) return true;
+        return false;
+    }
+
     const path = d3.geoPath().projection(projection);
 
     let redrawPending = false;
@@ -56,7 +90,8 @@ function initMap(canvas, initialCountries, onCountrySelected) {
         countries.forEach(feature => {
             tempContext.beginPath();
             renderPath(feature);
-            tempContext.fillStyle = '#334155';
+            const disabled = isDisabledCountry(feature);
+            tempContext.fillStyle = disabled ? '#2f3946' : '#334155';
             tempContext.fill();
             tempContext.strokeStyle = '#475569';
             tempContext.lineWidth = 0.5;
@@ -92,7 +127,8 @@ function initMap(canvas, initialCountries, onCountrySelected) {
             countries.forEach(feature => {
                 context.beginPath();
                 path(feature);
-                context.fillStyle = '#334155';
+                const disabled = isDisabledCountry(feature);
+                context.fillStyle = disabled ? '#2f3946' : '#334155';
                 context.fill();
                 context.strokeStyle = '#475569';
                 context.lineWidth = 0.5 / transform.k;
@@ -195,11 +231,13 @@ function initMap(canvas, initialCountries, onCountrySelected) {
 
         const found = countries.find(feature => d3.geoContains(feature, [lon, lat]));
 
-        if (found !== lastHovered) {
-            hoveredCountry = found;
-            lastHovered = found;
+        // If the hovered country is in a disabled continent, don't highlight or make it interactive
+        const effectiveHover = found && isDisabledCountry(found) ? null : found;
+        if (effectiveHover !== lastHovered) {
+            hoveredCountry = effectiveHover;
+            lastHovered = effectiveHover;
             requestDraw();
-            canvas.style.cursor = found ? 'pointer' : 'default';
+            canvas.style.cursor = effectiveHover ? 'pointer' : 'default';
         }
     });
 
@@ -213,6 +251,14 @@ function initMap(canvas, initialCountries, onCountrySelected) {
         let clicked = hoveredCountry;
         if (!clicked) {
             clicked = countries.find(feature => d3.geoContains(feature, [lon, lat]));
+        }
+
+        // If clicked country belongs to a disabled continent, ignore clicks
+        if (clicked && isDisabledCountry(clicked)) {
+            // clear selection if any and exit
+            selectedCountry = null;
+            requestDraw();
+            return;
         }
 
         if (clicked) {
@@ -261,12 +307,25 @@ function initMap(canvas, initialCountries, onCountrySelected) {
     resize();
     requestDraw();
 
+    // Programmatic view setter: center at lon/lat with given scale (1-8)
+    function setView(centerLon, centerLat, scale = 1, duration = 750) {
+        const p = projection([centerLon, centerLat]);
+        if (!p) return;
+        const tx = (width / 2) - scale * p[0];
+        const ty = (height / 2) - scale * p[1];
+        d3.select(canvas)
+            .transition()
+            .duration(duration)
+            .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+    }
+
     return {
         updateCountries: (newCountries) => {
             countries = newCountries;
             preRenderBaseMap();
         },
         resize,
+        setView,
         // Clear the currently selected country and redraw
         deselect: () => {
             selectedCountry = null;
