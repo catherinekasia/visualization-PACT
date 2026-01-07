@@ -39,7 +39,7 @@ function openPopup(feature, economyData, demographicsData, commData, energyData)
                 "namibia": "na", "nauru": "nr", "nepal": "np", "netherlands": "nl", "new zealand": "nz", "nicaragua": "ni", "niger": "ne", "nigeria": "ng", "north macedonia": "mk", "norway": "no",
                 "oman": "om", "pakistan": "pk", "palau": "pw", "palestine": "ps", "panama": "pa", "papua new guinea": "pg", "paraguay": "py", "peru": "pe", "philippines": "ph", "poland": "pl",
                 "portugal": "pt", "qatar": "qa", "romania": "ro", "russia": "ru", "rwanda": "rw", "saint kitts and nevis": "kn", "saint lucia": "lc", "saint vincent and the grenadines": "vc",
-                "samoa": "ws", "san marino": "sm", "sao tome and principe": "st", "saudi arabia": "sa", "senegal": "sn", "serbia": "rs", "seychelles": "sc", "sierra leone": "sl", "singapore": "sg",
+                "samoa": "ws", "san marino": "sm", "sao tome and principe": "st", "saudi arabia": "sa", "senegal": "sn", "republic of serbia": "rs", "seychelles": "sc", "sierra leone": "sl", "singapore": "sg",
                 "slovakia": "sk", "slovenia": "si", "solomon islands": "sb", "somalia": "so", "south africa": "za", "south sudan": "ss", "spain": "es", "sri lanka": "lk", "sudan": "sd", "suriname": "sr",
                 "sweden": "se", "switzerland": "ch", "syria": "sy", "taiwan": "tw", "tajikistan": "tj", "tanzania": "tz", "thailand": "th", "timor-leste": "tl", "togo": "tg", "tonga": "to",
                 "trinidad and tobago": "tt", "tunisia": "tn", "turkey": "tr", "turkmenistan": "tm", "tuvalu": "tv", "uganda": "ug", "ukraine": "ua", "united arab emirates": "ae", "united kingdom": "gb",
