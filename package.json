@@ -4,10 +4,12 @@
   "description": "A Neutralinojs minimal app",
   "main": "resources/js/main.js",
   "scripts": {
-  "start": "neu run",
-  "build": "neu build",
-  "update": "neu update"
-  },
+    "start": "neu run",
+    "build": "neu build", 
+    "update": "neu update",
+    "dev": "live-server ."
+},
   "author": "",
   "license": "MIT"
 }
+
