@@ -1,17 +1,345 @@
 <!DOCTYPE html>
-<html>
+<html lang = "en">
 <head>
   <meta charset="UTF-8">
-  <title>Data | Visualization-PACT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Country Explorer | Visualization-PACT</title>
   <link rel="stylesheet" href="styles.css">
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"
-        }
-      }
-    </script>
+  <style>
+    /* Additional styles for the clean explorer */
+    .explorer-container {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+      padding: 20px;
+      gap: 20px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+    
+    .attributes-panel {
+      width: 320px;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #334155;
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
+    
+    .results-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .results-row {
+      display: flex;
+      gap: 20px;
+      height: 50%;
+    }
+    
+    .result-card {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #334155;
+      flex: 1;
+    }
+
+    .results-panel {
+    flex: 1;
+    display: grid;
+    grid-template-rows: 340px 1fr;
+    gap: 20px;
+    min-width: 0;
+  }
+
+  /* Allow chart card to stretch */
+  #radar-container {
+    width: 100%;
+    height: 100%;
+    min-height: 600px; 
+  }
+      
+    .section-title {
+      color: #38bdf8;
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .section-title svg {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .attribute-group {
+      margin-bottom: 25px;
+    }
+    
+    .group-title {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .attribute-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      margin: 4px 0;
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .attribute-item:hover {
+      background: rgba(56, 189, 248, 0.1);
+      transform: translateX(4px);
+    }
+    
+    .attribute-item.selected {
+      background: rgba(56, 189, 248, 0.15);
+      border-left: 3px solid #38bdf8;
+    }
+    
+    .attribute-checkbox {
+      margin-right: 10px;
+      accent-color: #38bdf8;
+    }
+    
+    .attribute-label {
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      flex: 1;
+    }
+    
+    .selected-count {
+      color: #38bdf8;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    
+    .find-button {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: white;
+      border: none;
+      padding: 14px 0;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .find-button:hover:not(:disabled) {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(56, 189, 248, 0.3);
+    }
+    
+    .find-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .find-button {
+    position: sticky;
+    bottom: 0;
+  }
+    
+    /* 1) Make the whole page not “trap” scrolling inside the window */
+  html, body {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* 2) The main app wrapper must have a fixed height */
+  .container, .app, .main, .content {
+    height: 100vh;
+  }
+
+  
+    .country-results {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    
+    .country-result {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 8px;
+      border: 1px solid #334155;
+      transition: all 0.3s ease;
+    }
+    
+    .country-result.rank-1 {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(30, 41, 59, 0.7));
+      border-color: #38bdf8;
+    }
+    
+    .country-result.rank-2 {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(30, 41, 59, 0.7));
+      border-color: #0ea5e9;
+    }
+    
+    .country-result.rank-3 {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.1), rgba(30, 41, 59, 0.7));
+      border-color: #0284c7;
+    }
+    
+    .rank-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 15px;
+      flex-shrink: 0;
+    }
+    
+    .rank-1 .rank-badge {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: white;
+    }
+    
+    .rank-2 .rank-badge {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: white;
+    }
+    
+    .rank-3 .rank-badge {
+      background: linear-gradient(135deg, #0284c7, #075985);
+      color: white;
+    }
+    
+    .country-info {
+      flex: 1;
+    }
+    
+    .country-name {
+      color: #f1f5f9;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .country-score {
+      color: #38bdf8;
+      font-size: 0.9rem;
+    }
+    
+    .country-stats {
+      display: flex;
+      gap: 15px;
+      margin-top: 6px;
+    }
+    
+    .stat-item {
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+    
+    .stat-value {
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+    
+    #radar-container {
+    width: 100%;
+    height: 100%;
+  }
+    
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+    
+    .loading::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      margin-left: 10px;
+      border: 3px solid #334155;
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .selected-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(30, 41, 59, 0.3);
+      border-radius: 8px;
+      min-height: 50px;
+    }
+    
+    .selected-tag {
+      display: inline-flex;
+      align-items: center;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.1));
+      color: #38bdf8;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .attributes-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .attributes-scroll {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding-bottom: 80px;
+  }
+    
+    .remove-tag {
+      background: none;
+      border: none;
+      color: #38bdf8;
+      margin-left: 6px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+      padding: 0;
+    }
+  </style>
 </head>
 <body>
   <div class="centered-bg">
@@ -35,37 +363,569 @@
           </a>
         </nav>
       </aside>
-      <section class="map-section-modern" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
-        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <h1 style="color:#b6c2e2;font-family:Inter,sans-serif;font-size:2.2rem;">Three.js Visualization</h1>
-          <canvas id="three-canvas" style="display:block;width:480px;height:320px;background:#181f2a;border-radius:8px;"></canvas>
+      
+      <section class="map-section-modern" style="height:100%;">
+        <div class="explorer-container">
+          <!-- Left Panel: Attribute Selection -->
+          <div class="attributes-panel">
+            <div class="section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              SELECT ATTRIBUTES
+              <span class="selected-count" id="selected-count">0/10</span>
+            </div>
+            
+            <div class="selected-tags" id="selected-tags">
+              <!-- Selected attributes will appear here -->
+            </div>
+            <div class="attributes-scroll">
+
+    <!-- DEMOGRAPHICS -->
+    <div class="attribute-group">
+      <div class="group-title">Demographics</div>
+      <div id="demographics-attributes"></div>
+    </div>
+
+    <!-- ECONOMY -->
+    <div class="attribute-group">
+      <div class="group-title">Economy</div>
+      <div id="economy-attributes"></div>
+    </div>
+
+    <!-- ENERGY -->
+    <div class="attribute-group">
+      <div class="group-title">Energy</div>
+      <div id="energy-attributes"></div>
+    </div>
+
+    <!-- TRANSPORTATION -->
+    <div class="attribute-group">
+      <div class="group-title">Transportation</div>
+      <div id="transportation-attributes"></div>
+    </div>
+
+    <!-- GEOGRAPHY -->
+    <div class="attribute-group">
+      <div class="group-title">Geography</div>
+      <div id="geography-attributes"></div>
+    </div>
+
+    <!-- COMMUNICATIONS -->
+    <div class="attribute-group">
+      <div class="group-title">Communications</div>
+      <div id="communications-attributes"></div>
+    </div>
+
+    <!-- GOVERNMENT -->
+    <div class="attribute-group">
+      <div class="group-title">Government</div>
+      <div id="government-attributes"></div>
+    </div>
+
+</div>
+            
+            
+            <button class="find-button" id="find-countries" disabled>
+              FIND TOP COUNTRIES
+            </button>
+          </div>
+          
+          <!-- Right Panel: Results -->
+          <div class="results-panel">
+            <!-- Top Row: Country Rankings -->
+            <div class="result-card">
+              <div class="section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                TOP 3 COUNTRIES
+              </div>
+              <div class="country-results" id="country-results">
+                <div class="loading">Select attributes and click "Find Countries"</div>
+              </div>
+            </div>
+            
+            <!-- Bottom Row: Radar Chart -->
+            <div class="result-card">
+              <div class="section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                  <polyline points="2 17 12 22 22 17"/>
+                  <polyline points="2 12 12 17 22 12"/>
+                </svg>
+                ATTRIBUTE COMPARISON
+              </div>
+              <div id="radar-container">
+                <div class="loading">Waiting for selection...</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
-    <script type="module">
-      import * as THREE from "three";
-      const canvas = document.getElementById("three-canvas");
-      const renderer = new THREE.WebGLRenderer({ canvas });
-      renderer.setSize(480, 320);
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x181f2a);
-      const camera = new THREE.PerspectiveCamera(75, 480/320, 0.1, 1000);
-      camera.position.z = 3;
-      const geometry = new THREE.BoxGeometry();
-      const material = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
-      const cube = new THREE.Mesh(geometry, material);
-      scene.add(cube);
-      const light = new THREE.DirectionalLight(0xffffff, 1);
-      light.position.set(2, 2, 5);
-      scene.add(light);
-      function animate() {
-        requestAnimationFrame(animate);
-        cube.rotation.x += 0.01;
-        cube.rotation.y += 0.01;
-        renderer.render(scene, camera);
-      }
-      animate();
-    </script>
   </div>
-</body>
-</html>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- JavaScript -->
+  <script>
+
+  // PUT THE ENTIRE data-config.js CONTENT HERE instead of importing
+
+    const ATTRIBUTES = {
+    demographics: {
+      'Total_Population': 'Total Population',
+      'Population_growth_rate': 'Population Growth Rate', 
+      'Birth_rate': 'Birth Rate',
+      'Death_rate': 'Death Rate',
+      'Net_migration_rate': 'Net Migration Rate',
+      'Median_age': 'Median Age',
+      'Sex_ratio': 'Sex Ratio',
+      'Literacy_rate': 'Literacy Rate',
+      'Urban_population': 'Urban Population %'
+    },
+  
+    economy: {
+      'GDP_real_PPP': 'GDP (PPP)',
+      'GDP_real_official': 'GDP (Official)',
+      'GDP_growth_rate': 'GDP Growth Rate',
+      'GDP_per_capita_PPP': 'GDP per Capita (PPP)',
+      'GDP_per_capita_official': 'GDP per Capita (Official)',
+      'Unemployment_rate': 'Unemployment Rate',
+      'Inflation_rate': 'Inflation Rate',
+      'Public_debt': 'Public Debt % of GDP',
+      'Budget_deficit': 'Budget Deficit % of GDP',
+      'Exports': 'Exports',
+      'Imports': 'Imports'
+    },
+    
+    energy: {
+      'Electricity_access': 'Electricity Access %',
+      'Electricity_production': 'Electricity Production',
+      'Electricity_consumption': 'Electricity Consumption',
+      'Coal_production': 'Coal Production',
+      'Coal_consumption': 'Coal Consumption',
+      'Petroleum_production': 'Petroleum Production',
+      'Petroleum_consumption': 'Petroleum Consumption',
+      'Natural_gas_production': 'Natural Gas Production',
+      'Natural_gas_consumption': 'Natural Gas Consumption',
+      'Renewable_energy': 'Renewable Energy %',
+      'CO2_emissions': 'CO2 Emissions'
+    },
+    
+    transportation: {
+      'Total_roadways': 'Total Roadways (km)',
+      'Paved_roadways': 'Paved Roadways (km)',
+      'Railways': 'Railways (km)',
+      'Waterways': 'Waterways (km)',
+      'Pipelines_gas': 'Gas Pipelines (km)',
+      'Pipelines_oil': 'Oil Pipelines (km)',
+      'Airports_paved': 'Paved Airports',
+      'Airports_unpaved': 'Unpaved Airports',
+      'Heliports': 'Heliports'
+    },
+    
+    geography: {
+      'Total_area': 'Total Area (sq km)',
+      'Land_area': 'Land Area (sq km)',
+      'Water_area': 'Water Area (sq km)',
+      'Land_boundaries': 'Land Boundaries (km)',
+      'Coastline': 'Coastline (km)',
+      'Highest_point': 'Highest Point (m)',
+      'Lowest_point': 'Lowest Point (m)',
+      'Agricultural_land': 'Agricultural Land %',
+      'Forest_land': 'Forest Land %',
+      'Pasture_land': 'Pasture Land %'
+    },
+    
+    communications: {
+      'Telephone_subscriptions_fixed': 'Fixed Telephone Subscriptions',
+      'Telephone_subscriptions_mobile': 'Mobile Telephone Subscriptions',
+      'Internet_users': 'Internet Users',
+      'Internet_users_percent': 'Internet Users %',
+      'Broadband_subscriptions': 'Broadband Subscriptions'
+    },
+    
+    government: {
+      'Government_type': 'Government Type',
+      'Capital': 'Capital City',
+      'Capital_coordinates': 'Capital Coordinates',
+      'Suffrage_age': 'Suffrage Age',
+      'Legal_system': 'Legal System'
+    }
+  };
+
+  console.log("Script is running!");
+
+  // Test if ATTRIBUTES exists
+  if (typeof ATTRIBUTES !== 'undefined') {
+    console.log("ATTRIBUTES found:", Object.keys(ATTRIBUTES));
+  } else {
+    console.log("ERROR: ATTRIBUTES is undefined!");
+  }
+
+  // Test if DOM is ready
+  console.log("Demographics container:", document.getElementById('demographics-attributes'));
+
+  let SAMPLE_DATA = [];
+  Papa.parse("data.csv", {
+    download: true,
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+    complete: (results) => {
+      // Convert first column to `country` if needed
+      const cols = Object.keys(results.data[0] || {});
+      const firstCol = cols[0]; // your "first column country"
+
+      SAMPLE_DATA = results.data
+        .map(row => ({
+          ...row,
+          country: row.country ?? row.Country ?? row[firstCol]
+        }))
+        .filter(row => row.country); // keep valid rows only
+
+      console.log("Loaded countries:", SAMPLE_DATA.length);
+      console.log("First row keys:", Object.keys(SAMPLE_DATA[0] || {}));
+    },
+    error: (err) => console.error("CSV load error:", err)
+  });
+
+  
+  // State management
+  let selectedAttributes = new Map();
+  let topCountries = [];
+  
+  // Initialize attribute selection
+  function initializeAttributes() {
+    for (const [category, attributes] of Object.entries(ATTRIBUTES)) {
+      const container = document.getElementById(`${category}-attributes`);
+      if (!container) continue;
+
+      container.innerHTML = '';
+
+      for (const [key, label] of Object.entries(attributes)) {
+        const div = document.createElement('div');
+        div.className = 'attribute-item';
+        div.innerHTML = `
+          <input type="checkbox" class="attribute-checkbox" id="attr-${key}">
+          <label for="attr-${key}" class="attribute-label">${label}</label>
+        `;
+        container.appendChild(div);
+
+        const checkbox = div.querySelector('input');
+
+        checkbox.addEventListener('change', (e) => {
+          toggleAttribute(key, label, e.target.checked);
+          div.classList.toggle('selected', e.target.checked);
+        });
+
+        div.addEventListener('click', (e) => {
+          if (e.target.tagName.toLowerCase() === 'input') return;
+          checkbox.click();
+        });
+      }
+    }
+  }
+  
+  // Toggle attribute selection
+  function toggleAttribute(key, label, isSelected) {
+    if (isSelected) {
+      if (selectedAttributes.size >= 10) {
+        alert('Maximum 10 attributes allowed');
+        document.getElementById(`attr-${key}`).checked = false;
+        return;
+      }
+      selectedAttributes.set(key, label);
+    } else {
+      selectedAttributes.delete(key);
+    }
+    updateSelectedTags();
+    updateSelectedCount();
+    updateFindButton();
+  }
+
+  
+  // Update selected tags display
+  function updateSelectedTags() {
+    const container = document.getElementById('selected-tags');
+    container.innerHTML = '';
+
+    for (const [key, label] of selectedAttributes.entries()) {
+      const tag = document.createElement('div');
+      tag.className = 'selected-tag';
+      tag.innerHTML = `
+        ${label}
+        <button class="remove-tag" data-key="${key}">&times;</button>
+      `;
+      container.appendChild(tag);
+
+      tag.querySelector('.remove-tag').addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        const checkbox = document.getElementById(`attr-${key}`);
+        if (checkbox) checkbox.checked = false;
+
+        const item = checkbox?.closest('.attribute-item');
+        if (item) item.classList.remove('selected');
+
+        selectedAttributes.delete(key);
+
+        updateSelectedTags();
+        updateSelectedCount();
+        updateFindButton();
+      });
+    }
+  }
+
+  
+  // Update selected count
+  function updateSelectedCount() {
+    document.getElementById('selected-count').textContent = 
+      `${selectedAttributes.size}/10`;
+  }
+  
+  // Update find button state
+  function updateFindButton() {
+    const button = document.getElementById('find-countries');
+    button.disabled = selectedAttributes.size === 0;
+  }
+  
+  // Find top countries based on selected attributes
+  function findTopCountries() {
+    if (selectedAttributes.size === 0) return;
+
+    const dims = Array.from(selectedAttributes.entries()).map(([key, label]) => ({ key, label }));
+
+    // Compute min/max for each selected attribute across ALL countries (recommended)
+    const extents = {};
+    for (const d of dims) {
+      const vals = SAMPLE_DATA
+        .map(c => c[d.key])
+        .filter(v => typeof v === 'number' && !Number.isNaN(v));
+
+      const min = vals.length ? Math.min(...vals) : 0;
+      const max = vals.length ? Math.max(...vals) : 1;
+      extents[d.key] = { min, max: (max === min ? min + 1 : max) };
+    }
+
+    const countriesWithScores = SAMPLE_DATA.map(country => {
+      let total = 0;
+      let count = 0;
+
+      const attributes = dims.map(d => {
+        const raw = country[d.key];
+        const v = (typeof raw === 'number' && !Number.isNaN(raw)) ? raw : extents[d.key].min;
+        const { min, max } = extents[d.key];
+
+        const norm = 100 * (v - min) / (max - min); // 0..100
+        total += norm;
+        count++;
+
+        return {
+          key: d.key,
+          label: d.label,
+          raw: v,
+          norm: Math.round(norm * 10) / 10
+        };
+      });
+
+      const score = count ? total / count : 0;
+
+      return {
+        ...country,
+        score: Math.round(score * 10) / 10,
+        attributes
+      };
+    });
+
+    topCountries = countriesWithScores
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    // store extents globally for plotting if you want
+    window.__extents = extents;
+
+    displayTopCountries();
+    createRadarChart(); // we'll replace this with parallel coords below
+  }
+
+
+  
+  // Display top 3 countries
+  function displayTopCountries() {
+    const container = document.getElementById('country-results');
+    container.innerHTML = '';
+    
+    if (topCountries.length === 0) {
+      container.innerHTML = '<div class="loading">No countries match the criteria</div>';
+      return;
+    }
+    
+    topCountries.forEach((country, index) => {
+      const rank = index + 1;
+      const div = document.createElement('div');
+      div.className = `country-result rank-${rank}`;
+      
+      // Get top 3 attribute values for display
+      const topAttributes = country.attributes
+        .sort((a, b) => b.value - a.norm)
+        .slice(0, 3);
+      
+      div.innerHTML = `
+        <div class="rank-badge">${rank}</div>
+        <div class="country-info">
+          <div class="country-name">${country.country}</div>
+          <div class="country-score">Overall Score: ${country.score}/100</div>
+          <div class="country-stats">
+            ${topAttributes.map(attr => `
+              <div class="stat-item">
+                ${attr.label.split(' ')[0]}: <span class="stat-value">${attr.norm}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      container.appendChild(div);
+    });
+  }
+
+  function createRadarChart() {
+    if (topCountries.length === 0 || selectedAttributes.size === 0) return;
+
+    const container = document.getElementById('radar-container');
+    container.innerHTML = '';
+
+    const dims = Array.from(selectedAttributes.entries()).map(([key, label]) => ({ key, label }));
+
+    const W = container.clientWidth || 700;
+    const H = container.clientHeight || 420;
+    const pad = { top: 80, right: 30, bottom: 50, left: 40 };
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', String(W));
+    svg.setAttribute('height', String(H));
+    svg.style.display = 'block';
+
+    const xStep = (W - pad.left - pad.right) / Math.max(1, (dims.length - 1));
+    const xPos = (i) => pad.left + i * xStep;
+
+    // normalized scale: 0 bottom, 100 top
+    const yPos = (norm) => {
+      const t = norm / 100;
+      return pad.top + (1 - t) * (H - pad.top - pad.bottom);
+    };
+
+    const colors = ['#38bdf8', '#0ea5e9', '#0284c7'];
+
+    // Axes + labels + 0/100 ticks
+    dims.forEach((d, i) => {
+      const x = xPos(i);
+
+      const axis = document.createElementNS(svg.namespaceURI, 'line');
+      axis.setAttribute('x1', x);
+      axis.setAttribute('x2', x);
+      axis.setAttribute('y1', pad.top);
+      axis.setAttribute('y2', H - pad.bottom);
+      axis.setAttribute('stroke', '#334155');
+      axis.setAttribute('stroke-width', '1');
+      svg.appendChild(axis);
+
+      const label = document.createElementNS(svg.namespaceURI, 'text');
+      label.setAttribute('x', x);
+      label.setAttribute('y', 28);
+      label.setAttribute('text-anchor', 'end');
+      label.setAttribute('transform', `rotate(-35 ${x} 28)`);
+      label.setAttribute('fill', '#94a3b8');
+      label.setAttribute('font-size', '12');
+      label.textContent = d.label;
+      svg.appendChild(label);
+
+      const t0 = document.createElementNS(svg.namespaceURI, 'text');
+      t0.setAttribute('x', x);
+      t0.setAttribute('y', H - pad.bottom + 18);
+      t0.setAttribute('text-anchor', 'middle');
+      t0.setAttribute('fill', '#64748b');
+      t0.setAttribute('font-size', '11');
+      t0.textContent = '0';
+      svg.appendChild(t0);
+
+      const t100 = document.createElementNS(svg.namespaceURI, 'text');
+      t100.setAttribute('x', x);
+      t100.setAttribute('y', pad.top - 10);
+      t100.setAttribute('text-anchor', 'middle');
+      t100.setAttribute('fill', '#64748b');
+      t100.setAttribute('font-size', '11');
+      t100.textContent = '100';
+      svg.appendChild(t100);
+    });
+
+    // Lines + points
+    topCountries.forEach((country, ci) => {
+      // build normalized point list in the same order as dims
+      const normByKey = new Map(country.attributes.map(a => [a.key, a.norm]));
+
+      const pts = dims.map((d, i) => {
+        const x = xPos(i);
+        const norm = normByKey.get(d.key) ?? 0;
+        const y = yPos(norm);
+        return `${x},${y}`;
+      }).join(' ');
+
+      const poly = document.createElementNS(svg.namespaceURI, 'polyline');
+      poly.setAttribute('points', pts);
+      poly.setAttribute('fill', 'none');
+      poly.setAttribute('stroke', colors[ci % colors.length]);
+      poly.setAttribute('stroke-width', '3');
+      poly.setAttribute('stroke-linejoin', 'round');
+      poly.setAttribute('opacity', '0.95');
+      svg.appendChild(poly);
+
+      dims.forEach((d, i) => {
+        const x = xPos(i);
+        const norm = normByKey.get(d.key) ?? 0;
+        const y = yPos(norm);
+
+        const c = document.createElementNS(svg.namespaceURI, 'circle');
+        c.setAttribute('cx', x);
+        c.setAttribute('cy', y);
+        c.setAttribute('r', '4');
+        c.setAttribute('fill', colors[ci % colors.length]);
+        svg.appendChild(c);
+      });
+    });
+
+    // Legend
+    const legendY = H - 10;
+    topCountries.forEach((c, i) => {
+      const lx = pad.left + i * 180;
+
+      const dot = document.createElementNS(svg.namespaceURI, 'circle');
+      dot.setAttribute('cx', lx);
+      dot.setAttribute('cy', legendY);
+      dot.setAttribute('r', '5');
+      dot.setAttribute('fill', colors[i % colors.length]);
+      svg.appendChild(dot);
+
+      const txt = document.createElementNS(svg.namespaceURI, 'text');
+      txt.setAttribute('x', lx + 12);
+      txt.setAttribute('y', legendY + 4);
+      txt.setAttribute('fill', '#cbd5e1');
+      txt.setAttribute('font-size', '12');
+      txt.textContent = c.country;
+      svg.appendChild(txt);
+    });
+
+    container.appendChild(svg);
+  }
+
+  
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+    initializeAttributes();
+    
+    // Find countries button
+    document.getElementById('find-countries').addEventListener('click', findTopCountries);
+  });
+</script>
