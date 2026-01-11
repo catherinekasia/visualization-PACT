@@ -1,0 +1,139 @@
+import pandas as pd
+from pathlib import Path
+
+DISABLED_COUNTRIES = {
+    # Africa
+    'ALGERIA','ANGOLA','BENIN','BOTSWANA','BURKINA FASO','BURUNDI','CAMEROON',
+    'CAPE VERDE','CENTRAL AFRICAN REPUBLIC','CHAD','COMOROS','CONGO',
+    'DEMOCRATIC REPUBLIC OF THE CONGO','COTE D IVOIRE','DJIBOUTI','EGYPT',
+    'EQUATORIAL GUINEA','ERITREA','ETHIOPIA','GABON','GAMBIA','GHANA',
+    'GUINEA','GUINEA BISSAU','KENYA','LESOTHO','LIBERIA','LIBYA',
+    'MADAGASCAR','MALAWI','MALI','MAURITANIA','MAURITIUS','MOROCCO',
+    'MOZAMBIQUE','NAMIBIA','NIGER','NIGERIA','RWANDA',
+    'SAO TOME AND PRINCIPE','SENEGAL','SEYCHELLES','SIERRA LEONE','SOMALIA',
+    'SOUTH AFRICA','SOUTH SUDAN','SUDAN','ESWATINI','TANZANIA','TOGO',
+    'TUNISIA','UGANDA','WESTERN SAHARA','ZAMBIA','ZIMBABWE',
+
+    # Asia
+    'AFGHANISTAN','ARMENIA','AZERBAIJAN','BAHRAIN','BANGLADESH','BHUTAN',
+    'BRUNEI','CAMBODIA','CHINA','CYPRUS','GEORGIA','INDIA','INDONESIA',
+    'IRAN','IRAQ','ISRAEL','JORDAN','KAZAKHSTAN','KUWAIT','KYRGYZSTAN',
+    'LAOS','LEBANON','MALAYSIA','MALDIVES','MONGOLIA','MYANMAR','NEPAL',
+    'NORTH KOREA','OMAN','PAKISTAN','PALESTINE','PHILIPPINES','QATAR',
+    'SAUDI ARABIA','SINGAPORE','SRI LANKA','SYRIA','TAJIKISTAN','THAILAND',
+    'TIMOR LESTE','TURKMENISTAN','UNITED ARAB EMIRATES','UZBEKISTAN', "HOLY SEE (VATICAN CITY)", "AKROTIRI"
+    'VIETNAM','YEMEN',
+
+    # Oceania
+    'FIJI','PAPUA NEW GUINEA','SOLOMON ISLANDS','VANUATU','NEW CALEDONIA', "PALAU", "NAVASSA ISLAND", "COOK ISLANDS",
+    'FRENCH POLYNESIA','KIRIBATI','TONGA','SAMOA','MARSHALL ISLANDS', "PARACEL ISLANDS", "PITCAIRN ISLANDS",
+    'MICRONESIA','NAURU','TUVALU','GUAM', "WEST BANK", "VIRGIN ISLANDS", "SAINT HELENA, ASCENSION, AND TRISTAN DA CUNHA", 
+    "MICRONESIA, FEDERATED STATES OF", "ANTIGUA AND BARBUDA", "ASHMORE AND CARTIER ISLANDS", "BRITISH INDIAN OCEAN TERRITORY",
+
+    # South America
+    'ARGENTINA','BOLIVIA','BRAZIL','CHILE','COLOMBIA','ECUADOR','GUYANA', "CORAL SEA ISLANDS",
+    'PERU','PARAGUAY','SURINAME','URUGUAY','VENEZUELA', "UNITED STATES PACIFIC ISLAND WILDLIFE REFUGES", "GUINEA-BISSAU",
+    'FRENCH GUIANA','FALKLAND ISLANDS', "WALLIS AND FUTUNA", "WAKE ISLAND", "SOUTH GEORGIA AND SOUTH SANDWICH ISLANDS", "AMERICAN SAMOA", "AKROTIRI",
+
+    # Central America (excluding Mexico)
+    'BELIZE','COSTA RICA','EL SALVADOR','GUATEMALA','HONDURAS', "NORTHERN MARIANA ISLANDS", "NORFOLK ISLAND", "NIUE",
+    'NICARAGUA','PANAMA', "TOKELAU", "TIMOR-LESTE", "SVALBARD", "SPRATLY ISLANDS", "SAN MARINO", "SAINT PIERRE AND MIQUELON",
+    "MACAU", "JAN MAYEN", "GUINEA-BISSAU", "FAROE ISLANDS", "FALKLAND ISLANDS (ISLAS MALVINAS)", "DHEKELIA",
+
+    # Antarctica
+    'ANTARCTICA',
+
+    # Caribbean
+    'ANGUILLA','ARUBA','BAHAMAS','BARBADOS','BERMUDA','CURACAO','DOMINICA',
+    'DOMINICAN REPUBLIC','GRENADA','GUADELOUPE','HAITI','JAMAICA',
+    'SAINT KITTS AND NEVIS','SAINT LUCIA','MARTINIQUE','MONTSERRAT',
+    'PUERTO RICO','SINT MAARTEN','TURKS AND CAICOS ISLANDS',
+    'TRINIDAD AND TOBAGO','SAINT VINCENT AND THE GRENADINES',
+    'BRITISH VIRGIN ISLANDS','US VIRGIN ISLANDS','BONAIRE',
+    'SAINT BARTHELEMY','SAINT MARTIN','CUBA', "COCOS (KEELING) ISLANDS", "JAN MAYEN",
+    "FRENCH SOUTHERN AND ANTARCTIC LANDS", "GAMBIA, THE", "CAYMAN ISLANDS", "CHRISTMAS ISLAND", "CLIPPERTON ISLAND",
+    "COCOS (KEELING) ISLANDS", "CONGO, DEMOCRATIC REPUBLIC OF THE", "CONGO, REPUBLIC OF THE", 
+    "BOUVET ISLAND", "BRITISH INDIAN OCEAN TERRITORY", "BAHAMAS, THE", 
+}
+
+def detect_country_column(df):
+    # compare in lowercase only
+    possible = {"country", "country_name", "country name", "name"}
+    for col in df.columns:
+        if col.strip().lower() in possible:
+            return col
+    return None
+
+def filter_disabled_countries(df):
+    country_col = detect_country_column(df)
+    if country_col is None:
+        print(" No country column detected.")
+        return df
+
+    country_series = (
+        df[country_col]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
+
+    return df.loc[~country_series.isin(DISABLED_COUNTRIES)].reset_index(drop=True)
+
+def read_csv_robust(path: Path):
+    """
+    Robust reader:
+    - uses Python engine (handles weird quoting better)
+    - skips problematic lines
+    - collects skipped lines for reporting
+    Basically just to see if there are any problems in the input data.
+    """
+    bad_lines = []
+
+    def bad_line_handler(bad_line):
+        # bad_line is a list of strings for that row
+        bad_lines.append(",".join(bad_line))
+        return None  # skip it
+
+    df = pd.read_csv(
+        path,
+        engine="python",
+        on_bad_lines=bad_line_handler,  
+        sep=","
+    )
+    return df, bad_lines
+
+def main():
+    INPUT_DIR = Path("data")
+    OUTPUT_DIR = Path("data/filtered_cia_data")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+    # Many prints here are just for confirmation that the process is working correctly
+    csv_files = [INPUT_DIR / "communications_data.csv"]
+
+    for file in csv_files:
+        if not file.exists():
+            print(f" File not found: {file}")
+            continue
+
+        df, bad_lines = read_csv_robust(file)
+
+        if bad_lines:
+            report_path = OUTPUT_DIR / f"{file.stem}_bad_rows.txt"
+            report_path.write_text("\n".join(bad_lines), encoding="utf-8")
+            print(f"Skipped {len(bad_lines)} bad rows. Saved to {report_path.name}")
+
+        before = len(df)
+        filtered_df = filter_disabled_countries(df)
+        after = len(filtered_df)
+
+        out_path = OUTPUT_DIR / file.name
+        filtered_df.to_csv(out_path, index=False)
+
+        print(f"{file.name}: {before} → {after} (removed {before - after})")
+        print(f"📁 Saved: {out_path}")
+
+    print("\n Filtering complete.")
+
+if __name__ == "__main__":
+    main()
