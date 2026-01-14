@@ -1,5 +1,5 @@
 // data.js
-
+Neutralino.init();
 console.log("data.js loaded!");
 
 const ATTRIBUTES = window.ATTRIBUTES; // from data-config.js
@@ -15,44 +15,36 @@ let topCountries = [];
 let DATA_LOADED = false;
 
 const DATA_FILES = [
-  "data/demographics_data.csv",
-  "data/communications_data.csv",
-  "data/economy_data.csv",
-  "data/energy_data.csv",
-  "data/filtered_cia_data/Indexes_calc_code/global_peace_index.csv"
-  "data/filtered_cia_data/Indexes_calc_code/criminal_index.csv"
-  "data/filtered_cia_data/Indexes_calc_code/global_peace_index.csv"
+  "data/filtered_cia_data/demographics_data.csv",
+  "data/filtered_cia_data/communications_data.csv",
+  "data/filtered_cia_data/economy_data.csv",
+  "data/filtered_cia_data/energy_data.csv",
+  "data/filtered_cia_data/Indexes_calc_code/global_peace_index.csv",
+  "data/filtered_cia_data/Indexes_calc_code/criminal_index.csv",
+  "data/filtered_cia_data/Indexes_calc_code/global_terrorism_index.csv",
+  "data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv",
+  "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv"
 ];
 
-// Load one CSV file and return rows
-function loadCsv(path) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(path, window.location.href).toString(); // robust relative path
+// Load one CSV file using Neutralino
+async function loadCsv(path) {
+  try {
+    const content = await Neutralino.filesystem.readFile(path);
 
-    Papa.parse(url, {
-      download: true,
-      header: true,
-      dynamicTyping: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.errors && results.errors.length) {
-          console.warn("PapaParse warnings for", path, results.errors);
-        }
-        resolve(results.data || []);
-      },
-      error: (err) => {
-        console.error("PapaParse failed for:", url, err);
-        reject(err);
-      }
+    return new Promise((resolve, reject) => {
+      Papa.parse(content, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: (results) => resolve(results.data || []),
+        error: (err) => reject(err)
+      });
     });
-  });
+  } catch (e) {
+    console.error("Failed to read file:", path, e);
+    throw e;
+  }
 }
-
-// Normalize a country key so merges work even with spacing/case differences
-function normalizeCountryName(x) {
-  return String(x ?? "").trim().toLowerCase();
-}
-
 
 // Merge rows from many files by Country
 async function loadAllDataAndMerge() {
@@ -82,6 +74,7 @@ async function loadAllDataAndMerge() {
     DATA_LOADED = true;
     console.log("Merged countries:", SAMPLE_DATA.length);
     console.log("Example merged row keys:", Object.keys(SAMPLE_DATA[0] || {}));
+    console.log("Safety index example:", SAMPLE_DATA[0]?.safety_index);
 
     updateFindButton();
   } catch (e) {
