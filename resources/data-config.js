@@ -1,99 +1,62 @@
-// Define all available attributes from your CSV files
-export const ATTRIBUTES = {
-  // From demographics_data.csv
+/* data-config.js — matches YOUR CSV headers exactly */
+
+window.ATTRIBUTES = {
   demographics: {
-    'population': 'Total Population',
-    'population_density': 'Population Density',
-    'life_expectancy': 'Life Expectancy',
-    'birth_rate': 'Birth Rate',
-    'death_rate': 'Death Rate',
-    'median_age': 'Median Age',
-    'urban_population': 'Urban Population %'
+    Total_Population:           { label: "Total Population",            better: "max" },
+    Population_Growth_Rate:     { label: "Population Growth Rate",      better: "max" }, 
+    Birth_Rate:                 { label: "Birth Rate",                  better: "max" }, 
+    Death_Rate:                 { label: "Death Rate",                  better: "min" },
+    Net_Migration_Rate:         { label: "Net Migration Rate",          better: "max" },
+    Median_Age:                 { label: "Median Age",                  better: "max" },
+    Sex_Ratio:                  { label: "Sex Ratio",                   better: "max" },
+
+    Infant_Mortality_Rate:      { label: "Infant Mortality Rate",       better: "min" },
+    Total_Fertility_Rate:       { label: "Total Fertility Rate",        better: "max" }, 
+    Total_Literacy_Rate:        { label: "Total Literacy Rate",         better: "max" },
+    Male_Literacy_Rate:         { label: "Male Literacy Rate",          better: "max" },
+    Female_Literacy_Rate:       { label: "Female Literacy Rate",        better: "max" },
+
+    Youth_Unemployment_Rate:    { label: "Youth Unemployment Rate",     better: "min" }
   },
-  
-  // From economy_data.csv
+
+  communications: {
+    internet_users_total:                   { label: "Internet Users (Total)",          better: "max" },
+  },
+
   economy: {
-    'gdp': 'GDP',
-    'gdp_per_capita': 'GDP per Capita',
-    'gdp_growth': 'GDP Growth',
-    'inflation': 'Inflation Rate',
-    'unemployment': 'Unemployment Rate',
-    'debt_to_gdp': 'Debt to GDP Ratio'
+    Real_GDP_PPP_billion_USD:                       { label: "Real GDP (PPP) [B USD]",               better: "max" },
+    GDP_Official_Exchange_Rate_billion_USD:         { label: "GDP (Official) [B USD]",              better: "max" },
+    Real_GDP_Growth_Rate_percent:                   { label: "Real GDP Growth Rate [%]",           better: "max" },
+    Real_GDP_per_Capita_USD:                        { label: "Real GDP per Capita [USD]",          better: "max" },
+
+    Unemployment_Rate_percent:                      { label: "Unemployment Rate [%]",              better: "min" },
+    Youth_Unemployment_Rate_percent:                { label: "Youth Unemployment Rate [%]",        better: "min" },
+
+    Budget_billion_USD:                             { label: "Budget [B USD]",                      better: "max" },
+    Budget_Surplus_billion_USD:                     { label: "Budget Surplus [B USD]",              better: "max" },
+    Budget_Deficit_percent_of_GDP:                  { label: "Budget Deficit [% of GDP]",           better: "min" },
+
+    Public_Debt_percent_of_GDP:                     { label: "Public Debt [% of GDP]",              better: "min" },
+
+    Exports_billion_USD:                            { label: "Exports [B USD]",                     better: "max" },
+    Imports_billion_USD:                            { label: "Imports [B USD]",                     better: "max" },
+
+    Exchange_Rate_per_USD:                          { label: "Exchange Rate (per USD)",             better: "min" }, 
+    Population_Below_Poverty_Line_percent:          { label: "Population Below Poverty Line [%]",   better: "min" },
   },
-  
-  // From energy_data.csv
+
   energy: {
-    'energy_consumption': 'Energy Consumption',
-    'renewable_energy': 'Renewable Energy %',
-    'fossil_fuel': 'Fossil Fuel %',
-    'co2_emissions': 'CO2 Emissions'
+    electricity_access_percent:                { label: "Electricity Access [%]",            better: "max" },
+    electricity_generating_capacity_kW:        { label: "Electric Generating Capacity [kW]", better: "max" }, 
+    petroleum_bbl_per_day:                     { label: "Petroleum [bbl/day]",               better: "min" }, 
+
+    refined_petroleum_products_bbl_per_day:    { label: "Refined Petroleum Products [bbl/day]", better: "min" }, 
+    refined_petroleum_exports_bbl_per_day:     { label: "Refined Petroleum Exports [bbl/day]",  better: "max" },
+    refined_petroleum_imports_bbl_per_day:     { label: "Refined Petroleum Imports [bbl/day]",  better: "min" },
+
+    natural_gas_cubic_meters:                  { label: "Natural Gas [m³]",                  better: "min" }, 
+    carbon_dioxide_emissions_Mt:               { label: "CO₂ Emissions [Mt]",                better: "min" }
   },
-  
-  // From transportation_data.csv
-  transportation: {
-    'road_network': 'Road Network Length',
-    'rail_network': 'Rail Network Length',
-    'airports': 'Number of Airports',
-    'ports': 'Number of Ports'
-  },
-  
-  // From geography_data.csv
-  geography: {
-    'area': 'Total Area',
-    'land_area': 'Land Area',
-    'water_area': 'Water Area',
-    'coastline': 'Coastline Length'
-  }
+
 };
 
-// Sample country data (you'll replace this with actual CSV loading)
-export const SAMPLE_DATA = [
-  {
-    country: 'Norway',
-    gdp: 75, life_expectancy: 82, happiness: 85, population_density: 15,
-    renewable_energy: 98, education: 90, median_age: 39,
-    inflation: 2.1, unemployment: 3.2, area: 385207, coastline: 25148
-  },
-  {
-    country: 'Sweden',
-    gdp: 70, life_expectancy: 83, happiness: 88, population_density: 25,
-    renewable_energy: 65, education: 88, median_age: 41,
-    inflation: 2.3, unemployment: 6.8, area: 450295, coastline: 3218
-  },
-  {
-    country: 'Denmark',
-    gdp: 68, life_expectancy: 81, happiness: 90, population_density: 140,
-    renewable_energy: 60, education: 85, median_age: 42,
-    inflation: 1.8, unemployment: 5.0, area: 42931, coastline: 7314
-  },
-  {
-    country: 'Finland',
-    gdp: 65, life_expectancy: 82, happiness: 87, population_density: 18,
-    renewable_energy: 45, education: 92, median_age: 43,
-    inflation: 1.9, unemployment: 6.7, area: 338424, coastline: 1250
-  },
-  {
-    country: 'Switzerland',
-    gdp: 85, life_expectancy: 84, happiness: 82, population_density: 220,
-    renewable_energy: 25, education: 87, median_age: 43,
-    inflation: 0.7, unemployment: 2.3, area: 41277, coastline: 0
-  },
-  {
-    country: 'Germany',
-    gdp: 78, life_expectancy: 81, happiness: 80, population_density: 240,
-    renewable_energy: 30, education: 86, median_age: 46,
-    inflation: 1.5, unemployment: 3.2, area: 357022, coastline: 2389
-  },
-  {
-    country: 'Canada',
-    gdp: 73, life_expectancy: 83, happiness: 83, population_density: 4,
-    renewable_energy: 20, education: 84, median_age: 41,
-    inflation: 2.2, unemployment: 5.5, area: 9984670, coastline: 202080
-  },
-  {
-    country: 'Australia',
-    gdp: 71, life_expectancy: 83, happiness: 81, population_density: 3,
-    renewable_energy: 15, education: 82, median_age: 38,
-    inflation: 2.8, unemployment: 3.7, area: 7692024, coastline: 25760
-  }
-];
