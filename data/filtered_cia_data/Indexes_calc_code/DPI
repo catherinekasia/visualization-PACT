@@ -1,0 +1,131 @@
+# Demographic Pressure Index (DPI-R)
+# How much demographic pressure a country is experiencing
+
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DATA_DIR = SCRIPT_DIR.parent 
+
+# Input file
+PATH_DEMO = DATA_DIR / "demographics_data.csv"
+
+# Output file, where we save everything 
+OUT_FILE = SCRIPT_DIR / "DPI.csv"
+
+
+def detect_country_column(df: pd.DataFrame) -> str:
+    candidates = [
+        "Country", "country", "COUNTRY",
+        "Country Name", "country_name",
+        "Entity", "Location", "Name", "name"
+    ]
+    for c in candidates:
+        if c in df.columns:
+            return c
+    lower_map = {c.lower(): c for c in df.columns}
+    for c in candidates:
+        if c.lower() in lower_map:
+            return lower_map[c.lower()]
+    raise KeyError(f"Could not find a country column. Available columns:\n{list(df.columns)}")
+
+
+def find_column_by_keywords(df: pd.DataFrame, required_any=(), required_all=()):
+    """
+    Pick the first column whose lowercase name:
+      - contains at least one token from required_any (if provided)
+      - and contains all tokens from required_all (if provided)
+    """
+    for col in df.columns:
+        low = col.lower()
+        if required_any and not any(tok in low for tok in required_any):
+            continue
+        if required_all and not all(tok in low for tok in required_all):
+            continue
+        return col
+    return None
+
+
+def to_numeric_series(s: pd.Series) -> pd.Series:
+    x = (
+        s.astype(str)
+         .str.replace(",", "", regex=False)
+         .str.replace("%", "", regex=False)
+         .str.strip()
+    )
+    x = x.replace({"": np.nan, "NA": np.nan, "N/A": np.nan, "nan": np.nan, "None": np.nan})
+    return pd.to_numeric(x, errors="coerce")
+
+
+def minmax(series: pd.Series) -> pd.Series:
+    s = to_numeric_series(series)
+    mn = s.min(skipna=True)
+    mx = s.max(skipna=True)
+    if pd.isna(mn) or pd.isna(mx) or mx == mn:
+        return pd.Series(np.nan, index=s.index)
+    return (s - mn) / (mx - mn)
+
+
+def main():
+    if not PATH_DEMO.exists():
+        raise FileNotFoundError(f"File not found: {PATH_DEMO}")
+    #LOAD OF THE DATA
+    df = pd.read_csv(PATH_DEMO)
+
+    # Standardize COUNTRY
+    country_col = detect_country_column(df)
+    df["COUNTRY"] = df[country_col].astype(str).str.strip().str.upper()
+
+    # Detect variables
+    # Population growth rate column
+    growth_col = (
+        find_column_by_keywords(df, required_any=("population",), required_all=("growth",)) or
+        find_column_by_keywords(df, required_any=("pop",), required_all=("growth",)) or
+        find_column_by_keywords(df, required_any=("population_growth", "population growth", "pop growth"), required_all=())
+    )
+
+    # Infant mortality column
+    infmort_col = (
+        find_column_by_keywords(df, required_any=("infant",), required_all=("mort",)) or
+        find_column_by_keywords(df, required_any=("infant_mortality", "infant mortality"), required_all=()) or
+        find_column_by_keywords(df, required_any=("mortality",), required_all=("infant",))
+    )
+
+    if growth_col is None or infmort_col is None:
+        print("Available columns:", list(df.columns))
+        raise KeyError(
+            f"Could not auto-detect required columns.\n"
+            f"Detected growth_col={growth_col}\n"
+            f"Detected infmort_col={infmort_col}\n"
+            f"Set them manually (growth_col/infmort_col)."
+        )
+
+    print(" Using columns:")
+    print("  Country:", country_col)
+    print("  Population growth rate:", growth_col)
+    print("  Infant mortality rate:", infmort_col)
+
+    # Compute DPI-R
+    g_n = minmax(df[growth_col])        # higher growth => higher pressure
+    m_n = minmax(df[infmort_col])       # higher infant mortality => higher pressure
+
+    dpi = 100.0 * (0.45 * (g_n ** 1.6) + 0.45 * (m_n ** 1.6) + 0.10 * (g_n * m_n))
+
+    # Output table AND SAVE 
+    out = df[["COUNTRY"]].copy()
+    out["population_growth_rate_raw"] = to_numeric_series(df[growth_col])
+    out["infant_mortality_raw"] = to_numeric_series(df[infmort_col])
+    out["g_norm"] = g_n
+    out["m_norm"] = m_n
+    out["DPI_R"] = dpi
+
+    out = out.dropna(subset=["DPI_R"]).reset_index(drop=True)
+
+    out.to_csv(OUT_FILE, index=False)
+    print("Saved:", OUT_FILE)
+    print("Rows:", len(out))
+
+
+if __name__ == "__main__":
+    main()

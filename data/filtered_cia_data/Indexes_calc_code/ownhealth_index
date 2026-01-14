@@ -1,0 +1,130 @@
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+# ------------------ Paths ------------------
+DEMOGRAPHICS_PATH = "visualization-PACT/data/filtered_cia_data/demographics_data.csv"
+LIFE_EXPECTANCY_PATH = "visualization-PACT/data/filtered_cia_data/life_expectancy.csv"
+HEALTHCARE_PATH = "visualization-PACT/data/filtered_cia_data/heathcare_index_data.csv"
+
+OUT_PATH = "visualization-PACT/data/filtered_cia_data/health_index.csv"
+
+
+# ------------------ Helpers ------------------
+def canon_country(x: str) -> str:
+    """Canonical key for joining."""
+    if pd.isna(x):
+        return np.nan
+    s = str(x).strip()
+
+    aliases = {
+        "Türkiye": "TURKEY (TURKIYE)",
+        "Turkey": "TURKEY (TURKIYE)",
+        "United States of America": "UNITED STATES",
+        "United States": "UNITED STATES",
+        "United Kingdom": "UNITED KINGDOM",
+        "Czech Republic": "CZECHIA",
+        "Czech Republic (Czechia)": "CZECHIA",
+        "Korea, DPR": "KOREA, NORTH",
+        "Korea, Rep.": "KOREA, SOUTH",
+        "Korea, Rep": "KOREA, SOUTH",
+        "North Macedonia": "NORTH MACEDONIA",
+        "Bosnia and Herzegovina": "BOSNIA AND HERZEGOVINA",
+        "Hong Kong": "HONG KONG",
+        "Taiwan": "TAIWAN",
+        "DR Congo": "DEMOCRATIC REPUBLIC OF THE CONGO",
+        "Congo, Dem. Rep.": "DEMOCRATIC REPUBLIC OF THE CONGO",
+    }
+    return aliases.get(s, s).upper()
+
+
+def minmax_good(s: pd.Series) -> pd.Series:
+    """Higher = better -> 0..1"""
+    s = pd.to_numeric(s, errors="coerce")
+    mn, mx = s.min(skipna=True), s.max(skipna=True)
+    if pd.isna(mn) or pd.isna(mx) or mx == mn:
+        return s.where(s.isna(), 1.0)
+    return (s - mn) / (mx - mn)
+
+
+def minmax_bad_to_good(s: pd.Series) -> pd.Series:
+    """Higher = worse -> 0..1 where higher = better"""
+    s = pd.to_numeric(s, errors="coerce")
+    mn, mx = s.min(skipna=True), s.max(skipna=True)
+    if pd.isna(mn) or pd.isna(mx) or mx == mn:
+        return s.where(s.isna(), 1.0)
+    return 1 - (s - mn) / (mx - mn)
+
+
+def weighted_mean_rowwise(df: pd.DataFrame, weights: dict) -> pd.Series:
+    """
+    Row-wise weighted mean of 0..1 scores.
+    Renormalizes weights per row if some components are missing.
+    """
+    cols = list(weights.keys())
+    w = pd.Series(weights, dtype=float)
+
+    avail_w = df[cols].notna().mul(w, axis=1)
+    denom = avail_w.sum(axis=1).replace(0, np.nan)
+    num = df[cols].fillna(0).mul(avail_w).sum(axis=1)
+    return num / denom
+
+
+def read_csv_flexible(path_str: str) -> pd.DataFrame:
+    """Reads CSV; helpful if you later switch to a relative path."""
+    p = Path(path_str)
+    if p.exists():
+        return pd.read_csv(p)
+    # fallback: try as-is (in case it's mounted differently)
+    return pd.read_csv(path_str)
+
+
+# ------------------ Load ------------------
+demo = read_csv_flexible(DEMOGRAPHICS_PATH)            # ... Infant_Mortality_Rate ...
+life = read_csv_flexible(LIFE_EXPECTANCY_PATH)         # ... Sum of Life Expectancy  (both sexes) ...
+hc = read_csv_flexible(HEALTHCARE_PATH)                # COUNTRY, HEALTH CARE INDEX, ...
+
+# ------------------ Prepare keys + select cols ------------------
+demo["key"] = demo["Country"].map(canon_country)
+demo = demo[["key", "Country", "Infant_Mortality_Rate"]].rename(
+    columns={"Country": "country_demo", "Infant_Mortality_Rate": "infant_mortality"}
+)
+
+life["key"] = life["Country"].map(canon_country)
+life = life[["key", "Country", "Sum of Life Expectancy  (both sexes)"]].rename(
+    columns={"Country": "country_life", "Sum of Life Expectancy  (both sexes)": "life_expectancy"}
+)
+
+hc["key"] = hc["COUNTRY"].map(canon_country)
+hc = hc[["key", "COUNTRY", "HEALTH CARE INDEX"]].rename(
+    columns={"COUNTRY": "country_hc", "HEALTH CARE INDEX": "healthcare_index"}
+)
+
+# ------------------ Merge ------------------
+df = demo.merge(life, on="key", how="outer").merge(hc, on="key", how="outer")
+df["Country"] = (
+    df["country_demo"].combine_first(df["country_life"]).combine_first(df["country_hc"]).combine_first(df["key"])
+)
+
+# ------------------ Build 0..1 "good" scores ------------------
+df["healthcare_good"] = minmax_good(df["healthcare_index"])          # higher better
+df["lifeexp_good"] = minmax_good(df["life_expectancy"])              # higher better
+df["infantmort_good"] = minmax_bad_to_good(df["infant_mortality"])   # higher worse -> invert
+
+# ------------------ Health Index (Type A weighted average) ------------------
+# Default weights (outcomes-focused)
+weights = {"healthcare_good": 0.30, "lifeexp_good": 0.40, "infantmort_good": 0.30}
+df["health_index"] = 100 * weighted_mean_rowwise(df, weights)
+
+# ------------------ Save ------------------
+out_cols = [
+    "Country",
+    "healthcare_index",
+    "life_expectancy",
+    "infant_mortality",
+    "health_index",
+]
+df[out_cols].sort_values("health_index", ascending=False).to_csv(OUT_PATH, index=False)
+
+print("Saved:", OUT_PATH)
+print(df[out_cols].sort_values("health_index", ascending=False).head(10))

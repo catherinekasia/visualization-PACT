@@ -1,0 +1,161 @@
+import pandas as pd
+import numpy as np
+
+# The paths to the input data files
+PEACE_PATH = "visualization-PACT/data/filtered_cia_data/global_peace_index.csv"
+TERROR_PATH = "visualization-PACT/data/filtered_cia_data/global_terrorism_index.csv"
+CRIME_PATH = "visualization-PACT/data/filtered_cia_data/criminal_index.csv"
+
+OUT_PATH = "visualization-PACT/data/filtered_cia_data/safety_index_risk_focused.csv"
+
+# The function in case names are a bit different
+def canon_country(x: str) -> str:
+    """Canonical country key for joining (uppercased, with a few common aliases)."""
+    if pd.isna(x):
+        return np.nan
+    s = str(x).strip()
+
+    aliases = {
+        "Türkiye": "TURKEY (TURKIYE)",
+        "TURKIYE": "TURKEY (TURKIYE)",
+        "Turkey": "TURKEY (TURKIYE)",
+        "United States of America": "UNITED STATES",
+        "United States": "UNITED STATES",
+        "United Kingdom": "UNITED KINGDOM",
+        "Czech Republic": "CZECHIA",
+        "Czech Republic (Czechia)": "CZECHIA",
+        "Korea, DPR": "KOREA, NORTH",
+        "KOREA, DPR": "KOREA, NORTH",
+        "Korea, Rep.": "KOREA, SOUTH",
+        "Korea, Rep": "KOREA, SOUTH",
+        "KOREA, REP.": "KOREA, SOUTH",
+        "KOREA, REP": "KOREA, SOUTH",
+        "North Macedonia": "NORTH MACEDONIA",
+        "Bosnia and Herzegovina": "BOSNIA AND HERZEGOVINA",
+        "Hong Kong": "HONG KONG",
+        "Taiwan": "TAIWAN",
+    }
+    s = aliases.get(s, s)
+    return s.upper()
+
+def minmax_safe(series: pd.Series) -> pd.Series:
+    """
+    Convert a 'higher is worse' metric into a 0..1 'higher is safer' score
+    using min-max inversion.
+    """
+    s = pd.to_numeric(series, errors="coerce")
+    mn, mx = s.min(skipna=True), s.max(skipna=True)
+
+    if pd.isna(mn) or pd.isna(mx) or mx == mn:
+        # If constant/empty, treat present values as 1.0 (neutral safe)
+        return s.apply(lambda v: np.nan if pd.isna(v) else 1.0)
+
+    return 1.0 - (s - mn) / (mx - mn)
+
+def weighted_mean_rowwise(df_safe: pd.DataFrame, weights: dict, renormalize_missing: bool = True) -> pd.Series:
+    """
+    Row-wise weighted mean of safe-scores (0..1).
+    If renormalize_missing=True: ignores missing components and rescales weights per row.
+    If False: uses all weights regardless (missing -> NaN propagates).
+    """
+    cols = list(weights.keys())
+    w = pd.Series(weights, dtype=float)
+
+    if not renormalize_missing:
+        return (df_safe[cols] * w).sum(axis=1) / w.sum()
+
+    mask = ~df_safe[cols].isna()
+    w_mat = mask.mul(w, axis=1)
+    w_sum = w_mat.sum(axis=1)
+    num = (df_safe[cols].fillna(0) * w_mat).sum(axis=1)
+    return num / w_sum.replace(0, np.nan)
+
+# Loading the data 
+peace = pd.read_csv(PEACE_PATH)     # Country,peace_index,Change
+terror = pd.read_csv(TERROR_PATH)   # country,terrorism_index,rank_change
+crime = pd.read_csv(CRIME_PATH)     # Country,Criminality 2025,Score Change 2023 - 2025,Criminality,Criminal markets,Criminal actors,Resilience
+
+# Specify columns 
+peace = peace.rename(columns={c: c.strip() for c in peace.columns})
+peace["country_key"] = peace["Country"].map(canon_country)
+peace = peace[["country_key", "Country", "peace_index", "Change"]].rename(
+    columns={"Country": "country_peace", "Change": "peace_change"}
+)
+
+terror = terror.rename(columns={c: c.strip() for c in terror.columns})
+terror["country_key"] = terror["country"].map(canon_country)
+terror = terror[["country_key", "country", "terrorism_index", "rank_change"]].rename(
+    columns={"country": "country_terror", "rank_change": "terror_rank_change"}
+)
+
+crime = crime.rename(columns={c: c.strip() for c in crime.columns})
+crime["country_key"] = crime["Country"].map(canon_country)
+crime = crime[
+    [
+        "country_key",
+        "Country",
+        "Criminality 2025",
+        "Score Change 2023 - 2025",
+        "Criminality",
+        "Criminal markets",
+        "Criminal actors",
+        "Resilience",
+    ]
+].rename(
+    columns={
+        "Country": "country_crime",
+        "Criminality 2025": "criminality_2025",
+        "Score Change 2023 - 2025": "criminality_change_2023_2025",
+        "Criminality": "criminality_components",  # to avoid name clash
+        "Criminal markets": "criminal_markets",
+        "Criminal actors": "criminal_actors",
+        "Resilience": "resilience",
+    }
+)
+
+#
+df = crime.merge(peace, on="country_key", how="outer").merge(terror, on="country_key", how="outer")
+
+# Choose a display name
+df["Country"] = (
+    df["country_crime"]
+    .combine_first(df["country_peace"])
+    .combine_first(df["country_terror"])
+    .combine_first(df["country_key"])
+)
+
+
+# ---------- Build SAFE scores (0..1, higher=safer) ----------
+# All three are assumed "higher = worse" and inverted.
+df["crime_safe"] = minmax_safe(df["criminality_2025"])
+df["peace_safe"] = minmax_safe(df["peace_index"])
+df["terror_safe"] = minmax_safe(df["terrorism_index"])
+
+# ---------- Risk-focused Type A weights ----------
+weights = {"crime_safe": 0.40, "terror_safe": 0.40, "peace_safe": 0.20}
+
+df["safety_index_risk_focused"] = 100 * weighted_mean_rowwise(df, weights, renormalize_missing=True)
+
+out_cols = [
+    "Country",
+    "criminality_2025",
+    "peace_index",
+    "terrorism_index",
+    "crime_safe",
+    "peace_safe",
+    "terror_safe",
+    "safety_index_risk_focused",
+    # metadata (optional)
+    "criminality_change_2023_2025",
+    "peace_change",
+    "terror_rank_change",
+    "criminality_components",
+    "criminal_markets",
+    "criminal_actors",
+    "resilience",
+]
+
+df[out_cols].sort_values("safety_index_risk_focused", ascending=False).to_csv(OUT_PATH, index=False)
+
+print(f"Saved: {OUT_PATH}")
+print(df[out_cols].sort_values("safety_index_risk_focused", ascending=False).head(10))

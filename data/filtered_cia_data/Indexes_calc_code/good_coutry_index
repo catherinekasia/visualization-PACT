@@ -1,0 +1,158 @@
+
+
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+# Good Country Index calculation 
+# This script builds a "Good Country Index" from 4 already-computed
+# indices (all expected to be on a 0–100 scale, where higher = better):
+#   1) health_index                (from ownhealth_index.csv)
+#   2) safety_index_risk_focused   (from safety_index_risk_focused.csv)
+#   3) EconomicStability_E         (from economic_stability_option_c.csv)
+#   4) EPI_future                  (from earning_potential_epi_future.csv)
+#
+# Option 3 structure:
+#   QoL (Quality of Life) = 0.55 * Safety + 0.45 * Health
+#   Opportunity           = 0.55 * EconomicStability + 0.45 * EarningPotential
+#   GoodCountryIndex      = 0.60 * QoL + 0.40 * Opportunity
+#
+# The code also:
+#   - normalizes/standardizes country names into a common "key" for merging
+#   - merges all four datasets using that key
+#   - handles missing components by re-normalizing weights per row
+#   - outputs a final CSV with all intermediate and final scores
+
+
+
+
+BASE = Path("visualization-PACT/data/filtered_cia_data/Indexes_calc_code")
+
+PATH_HEALTH = BASE / "ownhealth_index.csv"
+PATH_SAFETY = BASE / "safety_index_risk_focused.csv"
+PATH_ECON   = BASE / "economic_stability_option_c.csv"
+PATH_EARN   = BASE / "earning_potential_epi_future.csv"
+
+OUT_PATH = BASE / "good_country_index_option3.csv"
+
+
+
+def canon_country(x):
+    """Canonical key for joining."""
+    if pd.isna(x):
+        return np.nan
+    s = str(x).strip()
+
+    aliases = {
+        "Türkiye": "TURKEY (TURKIYE)",
+        "Turkey": "TURKEY (TURKIYE)",
+        "TURKIYE": "TURKEY (TURKIYE)",
+        "United States of America": "UNITED STATES",
+        "United States": "UNITED STATES",
+        "United Kingdom": "UNITED KINGDOM",
+        "Czech Republic": "CZECHIA",
+        "Czech Republic (Czechia)": "CZECHIA",
+        "Korea, DPR": "KOREA, NORTH",
+        "Korea, Rep.": "KOREA, SOUTH",
+        "Korea, Rep": "KOREA, SOUTH",
+        "Hong Kong": "HONG KONG",
+        "Taiwan": "TAIWAN",
+        "North Macedonia": "NORTH MACEDONIA",
+        "Bosnia and Herzegovina": "BOSNIA AND HERZEGOVINA",
+    }
+    return aliases.get(s, s).upper()
+
+
+def weighted_mean_rowwise(df: pd.DataFrame, weights: dict) -> pd.Series:
+    """
+    Row-wise weighted mean with per-row renormalization if some inputs are missing.
+    """
+    cols = list(weights.keys())
+    w = pd.Series(weights, dtype=float)
+
+    avail_w = df[cols].notna().mul(w, axis=1)
+    denom = avail_w.sum(axis=1).replace(0, np.nan)
+    num = df[cols].fillna(0).mul(avail_w).sum(axis=1)
+    return num / denom
+
+
+
+health = pd.read_csv(PATH_HEALTH)  # Country, healthcare_index, life_expectancy, infant_mortality, health_index
+safety = pd.read_csv(PATH_SAFETY)  # Country, ..., safety_index_risk_focused, ...
+econ   = pd.read_csv(PATH_ECON)    # COUNTRY, ..., EconomicStability_E
+earn   = pd.read_csv(PATH_EARN)    # COUNTRY, ..., EPI_future
+
+# keys
+health["key"] = health["Country"].map(canon_country)
+safety["key"] = safety["Country"].map(canon_country)
+econ["key"]   = econ["COUNTRY"].map(canon_country)
+earn["key"]   = earn["COUNTRY"].map(canon_country)
+
+# keep only what we need
+health = health[["key", "Country", "health_index"]]
+safety = safety[["key", "Country", "safety_index_risk_focused"]]
+econ   = econ[["key", "COUNTRY", "EconomicStability_E"]].rename(columns={"COUNTRY": "Country"})
+earn   = earn[["key", "COUNTRY", "EPI_future"]].rename(columns={"COUNTRY": "Country"})
+
+# ensure numeric
+health["health_index"] = pd.to_numeric(health["health_index"], errors="coerce")
+safety["safety_index_risk_focused"] = pd.to_numeric(safety["safety_index_risk_focused"], errors="coerce")
+econ["EconomicStability_E"] = pd.to_numeric(econ["EconomicStability_E"], errors="coerce")
+earn["EPI_future"] = pd.to_numeric(earn["EPI_future"], errors="coerce")
+
+# Merge needed data together
+df = (
+    health.merge(safety[["key", "safety_index_risk_focused"]], on="key", how="outer")
+          .merge(econ[["key", "EconomicStability_E"]], on="key", how="outer")
+          .merge(earn[["key", "EPI_future"]], on="key", how="outer")
+)
+
+# best display country name (prefer health file if exists)
+name_map = (
+    health.set_index("key")["Country"]
+    .combine_first(safety.set_index("key")["Country"])
+    .combine_first(econ.set_index("key")["Country"])
+    .combine_first(earn.set_index("key")["Country"])
+)
+df["Country"] = df["key"].map(name_map).fillna(df["key"])
+
+# ---------------- Option 3 calculation ----------------
+# QoL = 0.55*Safety + 0.45*Health
+df["qol_index"] = weighted_mean_rowwise(
+    df.rename(columns={
+        "safety_index_risk_focused": "safety",
+        "health_index": "health"
+    }),
+    {"safety": 0.55, "health": 0.45}
+)
+
+# Opportunity = 0.55*EconomicStability + 0.45*EarningPotential
+df["opportunity_index"] = weighted_mean_rowwise(
+    df.rename(columns={
+        "EconomicStability_E": "econ",
+        "EPI_future": "earn"
+    }),
+    {"econ": 0.55, "earn": 0.45}
+)
+
+# GoodCountry = 0.60*QoL + 0.40*Opportunity
+df["good_country_index"] = weighted_mean_rowwise(
+    df, {"qol_index": 0.60, "opportunity_index": 0.40}
+)
+
+# Format of the output 
+out = df[[
+    "Country",
+    "health_index",
+    "safety_index_risk_focused",
+    "EconomicStability_E",
+    "EPI_future",
+    "qol_index",
+    "opportunity_index",
+    "good_country_index",
+]].sort_values("good_country_index", ascending=False)
+
+out.to_csv(OUT_PATH, index=False)
+
+print("Saved:", OUT_PATH)
+print(out.head(10).to_string(index=False))
