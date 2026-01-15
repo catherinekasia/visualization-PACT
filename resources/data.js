@@ -19,9 +19,9 @@ const DATA_FILES = [
   "data/filtered_cia_data/communications_data.csv",
   "data/filtered_cia_data/economy_data.csv",
   "data/filtered_cia_data/energy_data.csv",
-  "data/filtered_cia_data/Indexes_calc_code/global_peace_index.csv",
-  "data/filtered_cia_data/Indexes_calc_code/criminal_index.csv",
-  "data/filtered_cia_data/Indexes_calc_code/global_terrorism_index.csv",
+  "data/filtered_cia_data/global_peace_index.csv",
+  "data/filtered_cia_data/criminal_index.csv",
+  "data/filtered_cia_data/global_terrorism_index.csv",
   "data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv",
   "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv"
 ];
