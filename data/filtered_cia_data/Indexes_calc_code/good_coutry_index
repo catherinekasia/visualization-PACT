@@ -12,7 +12,7 @@ from pathlib import Path
 #   3) EconomicStability_E         (from economic_stability_option_c.csv)
 #   4) EPI_future                  (from earning_potential_epi_future.csv)
 #
-# Option 3 structure:
+# Structure:
 #   QoL (Quality of Life) = 0.55 * Safety + 0.45 * Health
 #   Opportunity           = 0.55 * EconomicStability + 0.45 * EarningPotential
 #   GoodCountryIndex      = 0.60 * QoL + 0.40 * Opportunity
