@@ -56,6 +56,51 @@ async function loadAllDataAndMerge() {
     // Map: normalizedCountry -> merged row object
     const merged = new Map();
 
+    // Helper to normalize country names for merging
+    function normalizeCountryName(name) {
+      if (!name) return '';
+      // Basic normalization: lowercase, trim, remove punctuation
+      let norm = name.toLowerCase().trim().replace(/[^a-z0-9 ]/g, '');
+      // Alias map for common country name variations
+      const aliases = {
+        'united states': 'united states of america',
+        'usa': 'united states of america',
+        'uk': 'united kingdom',
+        'russia': 'russian federation',
+        'south korea': 'korea, south',
+        'north korea': 'korea, north',
+        'ivory coast': 
+          'cote divoire',
+        'czechia': 'czech republic',
+        'viet nam': 'vietnam',
+        'laos': 'lao peoples democratic republic',
+        'syria': 'syrian arab republic',
+        'iran': 'iran (islamic republic of)',
+        'tanzania': 'tanzania, united republic of',
+        'venezuela': 'venezuela (bolivarian republic of)',
+        'moldova': 'moldova, republic of',
+        'bolivia': 'bolivia (plurinational state of)',
+        'brunei': 'brunei darussalam',
+        'palestine': 'palestine, state of',
+        'macedonia': 'north macedonia',
+        'slovakia': 'slovak republic',
+        'myanmar': 'myanmar (burma)',
+        'cape verde': 'cabo verde',
+        'swaziland': 'eswatini',
+        'east timor': 'timor-leste',
+        'micronesia': 'micronesia, federated states of',
+        'sao tome and principe': 'sao tome & principe',
+        'st vincent and the grenadines': 'saint vincent and the grenadines',
+        'st kitts and nevis': 'saint kitts and nevis',
+        'st lucia': 'saint lucia',
+        'bahamas': 'the bahamas',
+        'gambia': 'the gambia',
+        'congo': 'congo, republic of the',
+        'congo drc': 'congo, democratic republic of the',
+      };
+      if (aliases[norm]) return aliases[norm];
+      return norm;
+    }
     for (const rows of datasets) {
       for (const row of rows) {
         // pick the country field name in that file
