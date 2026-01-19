@@ -1,14 +1,16 @@
+// indexes.js - FIXED to use same paths as working data.js
+
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof Neutralino === "undefined") {
-    alert("Neutralino not loaded. Check <script src='js/neutralino.js'>");
+    alert("Neutralino not loaded");
     return;
   }
   if (typeof d3 === "undefined") {
-    alert("D3 not loaded. Check <script src='js/d3.v7.min.js'>");
+    alert("D3 not loaded");
     return;
   }
   if (typeof loadMapData === "undefined") {
-    alert("loadMapData missing. Include js/components/dataLoader.js");
+    alert("loadMapData missing");
     return;
   }
 
@@ -17,10 +19,11 @@ document.addEventListener("DOMContentLoaded", () => {
   Neutralino.events.on("ready", () => {
     const host = document.getElementById("single-map-host");
 
+    // FIXED: Use "data/" paths (NOT "../../data/") to match working data.js
     const INDEXES = {
-      gpi:    { title: "Global Peace Index",     path: "data/filtered_cia_data/Indexes_calc_code/global_peace_index.csv" },
-      crime:  { title: "Criminal Index",         path: "data/filtered_cia_data/Indexes_calc_code/criminal_index.csv" },
-      gti:    { title: "Global Terrorism Index", path: "data/filtered_cia_data/Indexes_calc_code/global_terrorism_index.csv" },
+      gpi:    { title: "Global Peace Index",     path: "data/filtered_cia_data/global_peace_index.csv" },
+      crime:  { title: "Criminal Index",         path: "data/filtered_cia_data/criminal_index.csv" },
+      gti:    { title: "Global Terrorism Index", path: "data/filtered_cia_data/global_terrorism_index.csv" },
       safety: { title: "Safety Index (Risk)",    path: "data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv" },
       health: { title: "Own Health Index",       path: "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv" }
     };
@@ -29,15 +32,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return String(x ?? "").trim().toLowerCase().replace(/\s+/g, " ");
     }
 
-    async function absAppPath(relPath) {
-      const res = await Neutralino.os.getPath("resources"); // .../resources
-      const base = (res + "/app/").replace(/\\/g, "/");
-      return base + relPath.replace(/\\/g, "/").replace(/^\/+/, "");
-    }
-
-    async function readCSV(relPath) {
-      const full = await absAppPath(relPath);
-      const txt = await Neutralino.filesystem.readFile(full);
+    async function readCSV(path) {
+      console.log("📂 Reading CSV:", path);
+      const txt = await Neutralino.filesystem.readFile(path);
       return d3.csvParse(txt);
     }
 
@@ -46,11 +43,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const cols = Object.keys(rows[0]);
       const banned = new Set(["Country", "country", "Change", "CHANGE"]);
 
-      // prefer something with "index"
       const idx = cols.find(c => !banned.has(c) && c.toLowerCase().includes("index"));
       if (idx) return idx;
 
-      // otherwise first numeric-like column
       for (const c of cols) {
         if (banned.has(c)) continue;
         const v = +rows[0][c];
@@ -68,6 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (Number.isNaN(v)) continue;
         m.set(normalizeCountryName(name), v);
       }
+      console.log(`✅ Built map for ${valueCol}: ${m.size} countries`);
       return m;
     }
 
@@ -101,6 +97,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const maxV = d3.max(values);
       const midV = (minV + maxV) / 2;
 
+      console.log(`📊 ${title} - min: ${minV?.toFixed(2)}, max: ${maxV?.toFixed(2)}`);
+
       const color = d3.scaleLinear()
         .domain([minV, midV, maxV])
         .range(["#22c55e", "#f59e0b", "#ef4444"])
@@ -127,11 +125,9 @@ document.addEventListener("DOMContentLoaded", () => {
         .text(`${title} | Range: ${minV?.toFixed?.(2) ?? "?"} → ${maxV?.toFixed?.(2) ?? "?"}`);
     }
 
-    // Cache so we don’t reread CSV every time
     const cache = new Map();
     let GEOJSON = null;
 
-    // Load the SAME map geometry your app uses
     loadMapData((err, mapData) => {
       if (err) {
         host.innerHTML = `<div class="loading">❌ Failed to load map geometry.</div>`;
@@ -143,7 +139,8 @@ document.addEventListener("DOMContentLoaded", () => {
         ? { type: "FeatureCollection", features: mapData }
         : (mapData.type === "FeatureCollection" ? mapData : { type: "FeatureCollection", features: mapData.features || [] });
 
-      // Activate buttons
+      console.log("✅ Map geometry loaded:", GEOJSON.features.length, "features");
+
       document.querySelectorAll("#index-tabs .map-btn").forEach(btn => {
         btn.addEventListener("click", async () => {
           document.querySelectorAll("#index-tabs .map-btn").forEach(b => b.classList.remove("active"));
@@ -157,9 +154,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
           try {
             if (!cache.has(key)) {
+              console.log(`🔄 Loading ${cfg.title}`);
               const rows = await readCSV(cfg.path);
               const valueCol = detectValueColumn(rows);
-              if (!valueCol) throw new Error(`No numeric column found in ${cfg.path}`);
+              if (!valueCol) throw new Error(`No numeric column found`);
+              console.log(`✅ Using column: ${valueCol}`);
               cache.set(key, { title: cfg.title, valueCol, map: buildCountryValueMap(rows, valueCol) });
             }
 
@@ -172,7 +171,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       });
 
-      // Default selection
       const first = document.querySelector("#index-tabs .map-btn[data-key='gpi']");
       if (first) first.click();
     });

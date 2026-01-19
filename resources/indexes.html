@@ -7,43 +7,29 @@
   <link rel="stylesheet" href="styles.css" />
 
   <style>
-    .indexes-wrap { height: 100vh; width: 100vw; display: flex; }
-    .map-section-modern { flex: 1; background: #232b3e; overflow: auto; }
-    .page-pad { padding: 18px; }
+    html, body { height: 100%; margin: 0; }
 
-    .maps-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
-    @media (max-width: 1200px) { .maps-grid { grid-template-columns: 1fr; } }
+    .centered-bg { min-height: 100vh; }
 
-    .map-card {
-      background: rgba(15, 23, 42, 0.65);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      border-radius: 14px;
-      padding: 12px;
-      box-shadow: 0 10px 22px rgba(0,0,0,0.35);
-      overflow: hidden;
-    }
-    .map-card h3 {
-      margin: 0 0 8px 0;
-      color: #e2e8f0;
-      font-size: 14px;
-      font-weight: 700;
+    .main-layout {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+      min-height: 100vh;
+      height: 100vh;
     }
-    .legend { display:flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; }
-    .legend-bar {
-      width: 140px; height: 10px; border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444);
+
+    .result-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; 
     }
-    .map-host { width: 100%; height: 360px; }
-    .map-loading { color:#94a3b8; font-size: 13px; padding: 16px 0; }
+
+    #single-map-host {
+      width: 100%;
+      flex: 1;        /* fills all remaining height in result-card */
+      min-height: 520px;
+      margin-top: 10px;
+    }
 
     .tooltip {
       position: fixed;
@@ -75,6 +61,7 @@
               </svg>
             </span>
           </a>
+
           <a class="nav-item" href="data.html" title="Data">
             <span class="nav-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -102,46 +89,43 @@
       </aside>
 
       <div class="result-card">
-  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
-        <path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 6-6"/>
-      </svg>
-      INDEX MAP
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+              <path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 6-6"/>
+            </svg>
+            INDEX MAP
+          </div>
+
+          <div id="index-tabs" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="map-btn" data-key="gpi">Global Peace</button>
+            <button class="map-btn" data-key="crime">Criminal</button>
+            <button class="map-btn" data-key="gti">Terrorism</button>
+            <button class="map-btn" data-key="safety">Safety</button>
+            <button class="map-btn" data-key="health">Health</button>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;margin:10px 0 0 0;color:#94a3b8;font-size:12px;">
+          <span id="legend-label">Low</span>
+          <span style="width:180px;height:10px;border-radius:999px;margin:0 10px;border:1px solid rgba(148,163,184,.25);
+            background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444);"></span>
+          <span>High</span>
+        </div>
+
+        <!-- NO fixed height here: it fills the remaining page now -->
+        <div id="single-map-host">
+          <div class="loading">Loading map…</div>
+        </div>
+      </div>
     </div>
-
-    <div id="index-tabs" style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="map-btn" data-key="gpi">Global Peace</button>
-      <button class="map-btn" data-key="crime">Criminal</button>
-      <button class="map-btn" data-key="gti">Terrorism</button>
-      <button class="map-btn" data-key="safety">Safety</button>
-      <button class="map-btn" data-key="health">Health</button>
-    </div>
   </div>
-
-  <div style="display:flex;align-items:center;justify-content:center;margin:10px 0 0 0;color:#94a3b8;font-size:12px;">
-    <span id="legend-label">Low</span>
-    <span style="width:180px;height:10px;border-radius:999px;margin:0 10px;border:1px solid rgba(148,163,184,.25);
-      background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444);"></span>
-    <span>High</span>
-  </div>
-
-  <div id="single-map-host" style="width:100%;height:520px;margin-top:10px;">
-    <div class="loading">Loading map…</div>
-  </div>
-</div>
-
 
   <div class="tooltip" id="tooltip"></div>
 
-  <!-- IMPORTANT: match your working index.html -->
   <script src="js/neutralino.js"></script>
   <script src="js/d3.v7.min.js"></script>
-
-  <!-- Reuse your existing loader so we use the SAME countries geometry -->
   <script src="js/components/dataLoader.js"></script>
-
-  <!-- New page logic -->
   <script src="js/indexes.js"></script>
 </body>
 </html>

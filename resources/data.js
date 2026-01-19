@@ -1,16 +1,15 @@
-// data.js
+// data.js - COMPLETE REWRITE for Country Comparison
 Neutralino.init();
-console.log("data.js loaded!");
+console.log("data.js loaded - Country Comparison Mode!");
 
-const ATTRIBUTES = window.ATTRIBUTES; // from data-config.js
+const ATTRIBUTES = window.ATTRIBUTES;
 if (!ATTRIBUTES) {
   console.error("ATTRIBUTES is missing. Check that data-config.js loads before data.js");
 }
-let SAMPLE_DATA = [];
 
-// State
-let selectedAttributes = new Map();
-let topCountries = [];
+let SAMPLE_DATA = [];
+let selectedCountries = new Map(); // Map of country name -> country data
+let selectedAttributes = new Map(); // Map of attribute key -> attribute meta
 
 let DATA_LOADED = false;
 
@@ -19,18 +18,21 @@ const DATA_FILES = [
   "data/filtered_cia_data/communications_data.csv",
   "data/filtered_cia_data/economy_data.csv",
   "data/filtered_cia_data/energy_data.csv",
-  "data/filtered_cia_data/global_peace_index.csv",
-  "data/filtered_cia_data/criminal_index.csv",
-  "data/filtered_cia_data/global_terrorism_index.csv",
   "data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv",
-  "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv"
+  "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv",
+  "data/filtered_cia_data/Indexes_calc_code/DPI.csv",
+  "data/filtered_cia_data/Indexes_calc_code/earning_potential_epi_future.csv",
+  "data/filtered_cia_data/Indexes_calc_code/economic_stability_option_c.csv",
+  "data/filtered_cia_data/Indexes_calc_code/good_country_index_option3.csv"
 ];
 
-// Load one CSV file using Neutralino
+// ============================================================================
+// DATA LOADING
+// ============================================================================
+
 async function loadCsv(path) {
   try {
     const content = await Neutralino.filesystem.readFile(path);
-
     return new Promise((resolve, reject) => {
       Papa.parse(content, {
         header: true,
@@ -46,22 +48,18 @@ async function loadCsv(path) {
   }
 }
 
-// Merge rows from many files by Country
 async function loadAllDataAndMerge() {
   try {
     console.log("Loading CSV files:", DATA_FILES);
 
     const datasets = await Promise.all(DATA_FILES.map(loadCsv));
     datasets.forEach((d, i) => console.log(DATA_FILES[i], "rows:", d.length));
-    // Map: normalizedCountry -> merged row object
+
     const merged = new Map();
 
-    // Helper to normalize country names for merging
     function normalizeCountryName(name) {
       if (!name) return '';
-      // Basic normalization: lowercase, trim, remove punctuation
       let norm = name.toLowerCase().trim().replace(/[^a-z0-9 ]/g, '');
-      // Alias map for common country name variations
       const aliases = {
         'united states': 'united states of america',
         'usa': 'united states of america',
@@ -69,94 +67,133 @@ async function loadAllDataAndMerge() {
         'russia': 'russian federation',
         'south korea': 'korea, south',
         'north korea': 'korea, north',
-        'ivory coast': 
-          'cote divoire',
+        'ivory coast': 'cote divoire',
         'czechia': 'czech republic',
         'viet nam': 'vietnam',
-        'laos': 'lao peoples democratic republic',
-        'syria': 'syrian arab republic',
-        'iran': 'iran (islamic republic of)',
-        'tanzania': 'tanzania, united republic of',
-        'venezuela': 'venezuela (bolivarian republic of)',
-        'moldova': 'moldova, republic of',
-        'bolivia': 'bolivia (plurinational state of)',
-        'brunei': 'brunei darussalam',
-        'palestine': 'palestine, state of',
-        'macedonia': 'north macedonia',
-        'slovakia': 'slovak republic',
-        'myanmar': 'myanmar (burma)',
-        'cape verde': 'cabo verde',
-        'swaziland': 'eswatini',
-        'east timor': 'timor-leste',
-        'micronesia': 'micronesia, federated states of',
-        'sao tome and principe': 'sao tome & principe',
-        'st vincent and the grenadines': 'saint vincent and the grenadines',
-        'st kitts and nevis': 'saint kitts and nevis',
-        'st lucia': 'saint lucia',
-        'bahamas': 'the bahamas',
-        'gambia': 'the gambia',
-        'congo': 'congo, republic of the',
-        'congo drc': 'congo, democratic republic of the',
       };
       if (aliases[norm]) return aliases[norm];
       return norm;
     }
+
     for (const rows of datasets) {
       for (const row of rows) {
-        // pick the country field name in that file
         const country = row.Country ?? row.country ?? row.COUNTRY;
         if (!country) continue;
 
         const k = normalizeCountryName(country);
-
         const prev = merged.get(k) || { Country: country };
         merged.set(k, { ...prev, ...row, Country: prev.Country || country });
       }
     }
 
     SAMPLE_DATA = Array.from(merged.values());
-
     DATA_LOADED = true;
-    console.log("Merged countries:", SAMPLE_DATA.length);
-    console.log("Example merged row keys:", Object.keys(SAMPLE_DATA[0] || {}));
-    console.log("Safety index example:", SAMPLE_DATA[0]?.safety_index);
 
-    updateFindButton();
+    console.log(" Merged countries:", SAMPLE_DATA.length);
+    
+    initializeCountrySelector();
+    updateCompareButton();
   } catch (e) {
     console.error("Failed to load/merge CSV files:", e);
-
     const results = document.getElementById("country-results");
     if (results) {
-      results.innerHTML =
-        `<div class="loading"> Failed to load CSV data. Check console/network for 404/CORS.</div>`;
+      results.innerHTML = `<div class="loading"> Failed to load CSV data.</div>`;
     }
   }
 }
 
+// ============================================================================
+// UI INITIALIZATION
+// ============================================================================
 
-
-function findColumnKey(row, wantedKey) {
-  const keys = Object.keys(row || {});
-  const normalize = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  const target = normalize(wantedKey);
-
-  // exact match
-  if (wantedKey in row) return wantedKey;
-
-  // normalized match
-  for (const k of keys) {
-    if (normalize(k) === target) return k;
+function initializeCountrySelector() {
+  const container = document.getElementById('country-selector');
+  if (!container) {
+    console.error("country-selector element not found");
+    return;
   }
 
-  return null;
+  // List of allowed countries (from your CSV)
+  const ALLOWED_COUNTRIES = new Set([
+    'ALBANIA', 'ANDORRA', 'AUSTRALIA', 'AUSTRIA', 'BELARUS', 'BELGIUM', 
+    'BOSNIA AND HERZEGOVINA', 'BULGARIA', 'BURMA', 'CABO VERDE', 'CANADA', 
+    'CROATIA', 'CZECHIA', 'DENMARK', 'ESTONIA', 'EUROPEAN UNION', 'FINLAND', 
+    'FRANCE', 'GAZA STRIP', 'GERMANY', 'GIBRALTAR', 'GREECE', 'GREENLAND', 
+    'GUERNSEY', 'HONG KONG', 'HUNGARY', 'ICELAND', 'IRELAND', 'ISLE OF MAN', 
+    'ITALY', 'JAPAN', 'JERSEY', 'KOREA, NORTH', 'KOREA, SOUTH', 'KOSOVO', 
+    'LATVIA', 'LIECHTENSTEIN', 'LITHUANIA', 'LUXEMBOURG', 'MALTA', 'MEXICO', 
+    'MOLDOVA', 'MONACO', 'MONTENEGRO', 'NETHERLANDS', 'NEW ZEALAND', 
+    'NORTH MACEDONIA', 'NORWAY', 'POLAND', 'PORTUGAL', 'ROMANIA', 'RUSSIA', 
+    'SERBIA', 'SLOVAKIA', 'SLOVENIA', 'SPAIN', 'SWEDEN', 'SWITZERLAND', 
+    'TAIWAN', 'TURKEY (TURKIYE)', 'UKRAINE', 'UNITED KINGDOM', 'UNITED STATES', 
+    'VIETNAM', 'WORLD'
+  ]);
+
+  // Filter and sort countries
+  const filteredCountries = SAMPLE_DATA.filter(country => 
+    ALLOWED_COUNTRIES.has((country.Country || '').toUpperCase())
+  );
+
+  const sortedCountries = filteredCountries.sort((a, b) => 
+    (a.Country || '').localeCompare(b.Country || '')
+  );
+
+  console.log(` Showing ${sortedCountries.length} allowed countries out of ${SAMPLE_DATA.length} total`);
+
+  container.innerHTML = `
+    <input type="text" 
+      id="country-search" 
+      placeholder="Search countries..." 
+      style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #475569; background:#1e293b; color:#e2e8f0; border-radius:6px;"
+    />
+    <div id="country-list" style="max-height:300px; overflow-y:auto;">
+      ${sortedCountries.map(country => `
+        <div class="country-item" data-country="${country.Country}">
+          <input type="checkbox" class="country-checkbox" id="country-${country.Country}">
+          <label for="country-${country.Country}" class="country-label">${country.Country}</label>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Search functionality
+  const searchInput = document.getElementById('country-search');
+  searchInput.addEventListener('input', (e) => {
+    const search = e.target.value.toLowerCase();
+    document.querySelectorAll('.country-item').forEach(item => {
+      const countryName = item.dataset.country.toLowerCase();
+      item.style.display = countryName.includes(search) ? 'block' : 'none';
+    });
+  });
+
+  // Country selection
+  document.querySelectorAll('.country-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const countryName = e.target.id.replace('country-', '');
+      const countryData = SAMPLE_DATA.find(c => c.Country === countryName);
+      
+      if (e.target.checked) {
+        if (selectedCountries.size >= 5) {
+          alert('Maximum 5 countries allowed');
+          e.target.checked = false;
+          return;
+        }
+        selectedCountries.set(countryName, countryData);
+      } else {
+        selectedCountries.delete(countryName);
+      }
+
+      updateSelectedCountries();
+      updateCompareButton();
+    });
+  });
+
+  console.log(" Country selector initialized");
 }
 
-// Initialize attribute selection UI
 function initializeAttributes() {
-  const ATTRIBUTES = window.ATTRIBUTES;
   if (!ATTRIBUTES) {
-    console.error("window.ATTRIBUTES is missing. Check script order in data.html");
+    console.error("window.ATTRIBUTES is missing");
     return;
   }
 
@@ -192,7 +229,6 @@ function initializeAttributes() {
   }
 }
 
-
 function toggleAttribute(key, meta, isSelected) {
   if (isSelected) {
     if (selectedAttributes.size >= 10) {
@@ -207,11 +243,46 @@ function toggleAttribute(key, meta, isSelected) {
 
   updateSelectedTags();
   updateSelectedCount();
-  updateFindButton();
+  updateCompareButton();
+}
+
+function updateSelectedCountries() {
+  const container = document.getElementById('selected-countries');
+  if (!container) return;
+  
+  container.innerHTML = '';
+
+  for (const [name, data] of selectedCountries.entries()) {
+    const tag = document.createElement('div');
+    tag.className = 'selected-tag';
+    tag.innerHTML = `
+      ${name}
+      <button class="remove-tag" data-country="${name}">&times;</button>
+    `;
+    container.appendChild(tag);
+
+    tag.querySelector('.remove-tag').addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      const checkbox = document.getElementById(`country-${name}`);
+      if (checkbox) checkbox.checked = false;
+
+      selectedCountries.delete(name);
+      updateSelectedCountries();
+      updateCompareButton();
+    });
+  }
+
+  const countEl = document.getElementById('country-count');
+  if (countEl) {
+    countEl.textContent = `${selectedCountries.size}/5`;
+  }
 }
 
 function updateSelectedTags() {
   const container = document.getElementById('selected-tags');
+  if (!container) return;
+  
   container.innerHTML = '';
 
   for (const [key, meta] of selectedAttributes.entries()) {
@@ -235,50 +306,112 @@ function updateSelectedTags() {
       selectedAttributes.delete(key);
       updateSelectedTags();
       updateSelectedCount();
-      updateFindButton();
+      updateCompareButton();
     });
   }
 }
 
-
-
 function updateSelectedCount() {
-  document.getElementById('selected-count').textContent = `${selectedAttributes.size}/10`;
+  const countEl = document.getElementById('selected-count');
+  if (countEl) {
+    countEl.textContent = `${selectedAttributes.size}/10`;
+  }
 }
 
-function updateFindButton() {
-  const button = document.getElementById("find-countries");
+function updateCompareButton() {
+  const button = document.getElementById("compare-countries");
   if (!button) return;
 
-  button.disabled = selectedAttributes.size === 0 || !DATA_LOADED;
+  button.disabled = selectedCountries.size === 0 || selectedAttributes.size === 0 || !DATA_LOADED;
 
-  button.textContent = DATA_LOADED ? "FIND TOP COUNTRIES" : "LOADING DATA...";
+  if (!DATA_LOADED) {
+    button.textContent = "LOADING DATA...";
+  } else if (selectedCountries.size === 0) {
+    button.textContent = "SELECT COUNTRIES";
+  } else if (selectedAttributes.size === 0) {
+    button.textContent = "SELECT ATTRIBUTES";
+  } else {
+    button.textContent = "COMPARE COUNTRIES";
+  }
 }
 
-function findTopCountries() {
-  if (selectedAttributes.size === 0) return;
+// ============================================================================
+// COMPARISON & VISUALIZATION
+// ============================================================================
 
-  if (!SAMPLE_DATA || SAMPLE_DATA.length === 0) {
-    alert("Data is still loading. Try again in a moment.");
+function compareCountries() {
+  if (selectedCountries.size === 0 || selectedAttributes.size === 0) {
+    alert("Please select both countries and attributes");
     return;
   }
 
-  // Build dimensions from selected attributes
-  const dims = Array.from(selectedAttributes.entries()).map(([key, meta]) => ({
-    key,
+  console.log("🔍 Comparing countries:", Array.from(selectedCountries.keys()));
+  console.log("📊 On attributes:", Array.from(selectedAttributes.keys()));
+
+  displayComparison();
+  createComparisonCharts();
+}
+
+function displayComparison() {
+  const container = document.getElementById('country-results');
+  if (!container) return;
+  
+  container.innerHTML = '';
+
+  const countries = Array.from(selectedCountries.values());
+  const attributes = Array.from(selectedAttributes.entries());
+
+  countries.forEach((country, index) => {
+    const div = document.createElement('div');
+    div.className = `country-result rank-${index + 1}`;
+
+    const countryAttrs = attributes
+      .map(([key, meta]) => ({
+        label: meta.label,
+        value: country[key],
+        key: key
+      }))
+      .filter(a => a.value != null);
+
+    div.innerHTML = `
+      <div class="rank-badge">${index + 1}</div>
+      <div class="country-info">
+        <div class="country-name">${country.Country}</div>
+        <div class="country-stats">
+          ${countryAttrs.slice(0, 5).map(attr => `
+            <div class="stat-item">
+              ${attr.label}: <span class="stat-value">${
+                typeof attr.value === 'number' ? attr.value.toFixed(2) : attr.value
+              }</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function createComparisonCharts() {
+  const container = document.getElementById('radar-container');
+  if (!container) return;
+  
+  container.innerHTML = '';
+
+  const countries = Array.from(selectedCountries.values());
+  const dims = Array.from(selectedAttributes.entries()).map(([key, meta]) => ({ 
+    key, 
     label: meta.label,
-    better: meta.better || "max"
+    better: meta.better || 'max'
   }));
 
+  // Compute min/max for normalization
   const extents = {};
-
-  // Compute min/max ONLY for numeric columns
   for (const d of dims) {
     const vals = SAMPLE_DATA
       .map(row => row[d.key])
       .filter(v => typeof v === "number" && !Number.isNaN(v));
 
-    // Non-numeric column → skip
     if (vals.length === 0) {
       extents[d.key] = null;
       continue;
@@ -292,110 +425,6 @@ function findTopCountries() {
       max: max === min ? min + 1 : max
     };
   }
-
-  // Score countries
-  const countriesWithScores = SAMPLE_DATA.map(country => {
-    let total = 0;
-    let count = 0;
-
-    const attributes = [];
-
-    for (const d of dims) {
-      const extent = extents[d.key];
-
-      // Skip non-numeric attributes
-      if (!extent) continue;
-
-      const raw = country[d.key];
-      if (typeof raw !== "number" || Number.isNaN(raw)) continue;
-
-      let norm = 100 * (raw - extent.min) / (extent.max - extent.min);
-
-      // invert if lower is better
-      if (d.better === "min") {
-        norm = 100 - norm;
-      }
-
-      total += norm;
-      count++;
-
-      attributes.push({
-        key: d.key,
-        label: d.label,
-        raw,
-        norm: Math.round(norm * 10) / 10
-      });
-    }
-
-    //  Country has no valid numeric attributes
-    if (count === 0) return null;
-
-    return {
-      country: country.Country || country.country,
-      score: Math.round((total / count) * 10) / 10,
-      attributes
-    };
-  }).filter(Boolean);
-
-
-  topCountries = countriesWithScores
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-
-  displayTopCountries();
-  createRadarChart();
-}
-
-
-function displayTopCountries() {
-  const container = document.getElementById('country-results');
-  container.innerHTML = '';
-
-  if (topCountries.length === 0) {
-    container.innerHTML = '<div class="loading">No countries match the criteria</div>';
-    return;
-  }
-
-  topCountries.forEach((country, index) => {
-    const rank = index + 1;
-    const div = document.createElement('div');
-    div.className = `country-result rank-${rank}`;
-
-    if (!SAMPLE_DATA || SAMPLE_DATA.length === 0) {
-    alert("Data is still loading. Please try again in a moment.");
-    return;
-    }
-
-    // FIX: you had b.value (doesn't exist). Use b.norm.
-    const topAttributes = [...country.attributes]
-      .sort((a, b) => b.norm - a.norm)
-      .slice(0, 3);
-
-    div.innerHTML = `
-      <div class="rank-badge">${rank}</div>
-      <div class="country-info">
-        <div class="country-name">${country.country}</div>
-        <div class="country-score">Overall Score: ${country.score}/100</div>
-        <div class="country-stats">
-          ${topAttributes.map(attr => `
-            <div class="stat-item">
-              ${attr.label.split(' ')[0]}: <span class="stat-value">${attr.norm}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-}
-
-function createRadarChart() {
-  if (topCountries.length === 0 || selectedAttributes.size === 0) return;
-
-  const container = document.getElementById('radar-container');
-  container.innerHTML = '';
-
-  const dims = Array.from(selectedAttributes.entries()).map(([key, label]) => ({ key, label }));
 
   const W = container.clientWidth || 700;
   const H = container.clientHeight || 420;
@@ -414,24 +443,24 @@ function createRadarChart() {
     return pad.top + (1 - t) * (H - pad.top - pad.bottom);
   };
 
-  const colors = ['#38bdf8', '#0ea5e9', '#0284c7'];
+  const colors = ['#38bdf8', '#0ea5e9', '#0284c7', '#22c55e', '#f59e0b'];
 
-  // axes
+  // Draw axes
   dims.forEach((d, i) => {
     const x = xPos(i);
 
     const axis = document.createElementNS(svg.namespaceURI, 'line');
-    axis.setAttribute('x1', x);
-    axis.setAttribute('x2', x);
-    axis.setAttribute('y1', pad.top);
-    axis.setAttribute('y2', H - pad.bottom);
+    axis.setAttribute('x1', String(x));
+    axis.setAttribute('x2', String(x));
+    axis.setAttribute('y1', String(pad.top));
+    axis.setAttribute('y2', String(H - pad.bottom));
     axis.setAttribute('stroke', '#334155');
     axis.setAttribute('stroke-width', '1');
     svg.appendChild(axis);
 
     const label = document.createElementNS(svg.namespaceURI, 'text');
-    label.setAttribute('x', x);
-    label.setAttribute('y', 28);
+    label.setAttribute('x', String(x));
+    label.setAttribute('y', '28');
     label.setAttribute('text-anchor', 'end');
     label.setAttribute('transform', `rotate(-35 ${x} 28)`);
     label.setAttribute('fill', '#94a3b8');
@@ -440,13 +469,26 @@ function createRadarChart() {
     svg.appendChild(label);
   });
 
-  // lines
-  topCountries.forEach((country, ci) => {
-    const normByKey = new Map(country.attributes.map(a => [a.key, a.norm]));
-
+  // Draw country lines
+  countries.forEach((country, ci) => {
     const pts = dims.map((d, i) => {
       const x = xPos(i);
-      const norm = normByKey.get(d.key) ?? 0;
+      const extent = extents[d.key];
+      
+      if (!extent) {
+        return `${x},${yPos(0)}`;
+      }
+
+      const raw = country[d.key];
+      if (typeof raw !== "number" || Number.isNaN(raw)) {
+        return `${x},${yPos(0)}`;
+      }
+
+      let norm = 100 * (raw - extent.min) / (extent.max - extent.min);
+      if (d.better === "min") {
+        norm = 100 - norm;
+      }
+
       const y = yPos(norm);
       return `${x},${y}`;
     }).join(' ');
@@ -457,22 +499,50 @@ function createRadarChart() {
     poly.setAttribute('stroke', colors[ci % colors.length]);
     poly.setAttribute('stroke-width', '3');
     poly.setAttribute('stroke-linejoin', 'round');
-    poly.setAttribute('opacity', '0.95');
+    poly.setAttribute('opacity', '0.9');
     svg.appendChild(poly);
   });
+
+  // Legend
+  const legend = document.createElementNS(svg.namespaceURI, 'g');
+  countries.forEach((country, i) => {
+    const y = H - 25 - (i * 15);
+    
+    const line = document.createElementNS(svg.namespaceURI, 'line');
+    line.setAttribute('x1', '10');
+    line.setAttribute('x2', '30');
+    line.setAttribute('y1', String(y));
+    line.setAttribute('y2', String(y));
+    line.setAttribute('stroke', colors[i % colors.length]);
+    line.setAttribute('stroke-width', '3');
+    legend.appendChild(line);
+
+    const text = document.createElementNS(svg.namespaceURI, 'text');
+    text.setAttribute('x', '35');
+    text.setAttribute('y', String(y + 4));
+    text.setAttribute('fill', '#e2e8f0');
+    text.setAttribute('font-size', '11');
+    text.textContent = country.Country;
+    legend.appendChild(text);
+  });
+  svg.appendChild(legend);
 
   container.appendChild(svg);
 }
 
-// DOM ready
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
 document.addEventListener("DOMContentLoaded", () => {
   initializeAttributes();
   updateSelectedCount();
-  updateFindButton();
+  updateCompareButton();
 
-  document.getElementById("find-countries")
-    .addEventListener("click", findTopCountries);
+  const compareBtn = document.getElementById("compare-countries");
+  if (compareBtn) {
+    compareBtn.addEventListener("click", compareCountries);
+  }
 
-  loadAllDataAndMerge(); // load all CSVs from /data
+  loadAllDataAndMerge();
 });
-

@@ -1,26 +1,32 @@
 /* data-config.js — matches YOUR CSV headers exactly */
 
 window.ATTRIBUTES = {
+  Indexes:{
+    DPI_R:                      { label: "Demographic Pressure Index",  better: "min" },
+    EPI_future:                 { label: "Future Earning Potential",    better: "max" },
+    EconomicStability_E:        { label: "Economic Stability Index",    better: "max" },
+    good_country_index:         { label: "Good country Index",          better: "max" },
+    health_index:               { label: "Health Index",                better: "max" },
+    safety_index_risk_focused:  { label: "Safety Index",                better: "max" },
+  },
+
   demographics: {
-    Total_Population:           { label: "Total Population",            better: "max" },
-    Population_Growth_Rate:     { label: "Population Growth Rate",      better: "max" }, 
+    Total_Population:           { label: "Country size",            better: "max" },
+    Population_Growth_Rate:     { label: "Future Population Pressure",      better: "max" }, 
     Birth_Rate:                 { label: "Birth Rate",                  better: "max" }, 
     Death_Rate:                 { label: "Death Rate",                  better: "min" },
     Net_Migration_Rate:         { label: "Net Migration Rate",          better: "max" },
     Median_Age:                 { label: "Median Age",                  better: "max" },
-    Sex_Ratio:                  { label: "Sex Ratio",                   better: "max" },
-
-    Infant_Mortality_Rate:      { label: "Infant Mortality Rate",       better: "min" },
+    Sex_Ratio:                  { label: "Gender Balance in Population",                   better: "max" },
     Total_Fertility_Rate:       { label: "Total Fertility Rate",        better: "max" }, 
-    Total_Literacy_Rate:        { label: "Total Literacy Rate",         better: "max" },
+    Total_Literacy_Rate:        { label: "Education Level of Population",         better: "max" },
     Male_Literacy_Rate:         { label: "Male Literacy Rate",          better: "max" },
     Female_Literacy_Rate:       { label: "Female Literacy Rate",        better: "max" },
-
     Youth_Unemployment_Rate:    { label: "Youth Unemployment Rate",     better: "min" }
   },
 
   communications: {
-    internet_users_total:                   { label: "Internet Users (Total)",          better: "max" },
+    internet_users_total:                   { label: "Digital Connectivity Scale",          better: "max" },
   },
 
   economy: {
