@@ -113,7 +113,7 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
             <li><strong>Safety Index:</strong> ${safetyIndexVal}</li>
             <li><strong>Health Index:</strong> ${healthIndexVal}</li>
         </ul>
-        <a href="#" id="explain-indexes-link" style="color: #4a90d9; text-decoration: underline; cursor: pointer;">How are these indexes calculated?</a>`;
+        <a href="#" id="explain-indexes-link" style="color: #4a90d9; text-decoration: underline; cursor: pointer;">What do these indexes mean?</a>`;
     
     // Add click handler for explanation link using onclick directly
     const explainLink = document.getElementById('explain-indexes-link');
@@ -192,15 +192,15 @@ function drawCharts(feature, economyData, demographicsData, commData, energyData
 
     drawRadarChart("#chart-radar", radarData);
 
-    // --- Bar Data ---
-    const gdp = parseFloat(eco.Real_GDP_per_Capita_USD) || 0;
-    const unemployment = parseFloat(eco.Unemployment_Rate_percent) || 0;
-    const debt = parseFloat(eco.Public_Debt_percent_of_GDP) || 0;
+    // --- Bar Data: Population Demographics ---
+    const birthRate = parseFloat(demo.Birth_Rate) || 0;
+    const deathRate = parseFloat(demo.Death_Rate) || 0;
+    const medianAge = parseFloat(demo.Median_Age) || 0;
 
     const barData = [
-        { label: "GDP/Cap", value: gdp, max: 100000, format: v => `$${(v / 1000).toFixed(1)}k` },
-        { label: "Unemployment", value: unemployment, max: 20, format: v => `${v}%` },
-        { label: "Public Debt", value: debt, max: 150, format: v => `${v}%` }
+        { label: "Birth Rate", value: birthRate, max: 40, format: v => `${v.toFixed(1)}/1k` },
+        { label: "Death Rate", value: deathRate, max: 20, format: v => `${v.toFixed(1)}/1k` },
+        { label: "Median Age", value: medianAge, max: 50, format: v => `${v.toFixed(0)} yrs` }
     ];
 
     drawBarChart("#chart-bar", barData);
@@ -221,7 +221,7 @@ function openIndexExplanationPopup() {
         explainModal.innerHTML = `
             <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; padding: 30px; max-width: 600px; max-height: 80vh; overflow-y: auto; margin: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="color: #fff; margin: 0;">How Indexes Are Calculated</h2>
+                    <h2 style="color: #fff; margin: 0;">What do these indexes mean?</h2>
                     <button id="close-explain-modal" style="background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
                 </div>
                 

@@ -76,9 +76,12 @@ function drawBarChart(selector, data) {
 
     const width = container.node().clientWidth;
     const height = container.node().clientHeight;
-    const margin = { top: 20, right: 10, bottom: 30, left: 10 };
+    const margin = { top: 25, right: 15, bottom: 40, left: 15 };
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
+
+    // Define colors for each bar
+    const colors = ["#38bdf8", "#a78bfa", "#34d399"];
 
     const svg = container.append("svg")
         .attr("width", width)
@@ -89,8 +92,9 @@ function drawBarChart(selector, data) {
     const x = d3.scaleBand()
         .range([0, chartWidth])
         .domain(data.map(d => d.label))
-        .padding(0.4);
+        .padding(0.3);
 
+    // Draw bars with distinct colors
     svg.selectAll(".bar")
         .data(data)
         .enter()
@@ -104,22 +108,25 @@ function drawBarChart(selector, data) {
         })
         .attr("height", d => {
             const pct = Math.min(d.value / d.max, 1);
-            return Math.max(chartHeight * pct, 2); // Min height 2px
+            return Math.max(chartHeight * pct, 2);
         })
-        .attr("rx", 4);
+        .attr("rx", 4)
+        .style("fill", (d, i) => colors[i % colors.length]);
 
-    // Labels
+    // Labels at bottom
     svg.selectAll(".label")
         .data(data)
         .enter()
         .append("text")
         .attr("class", "chart-axis")
         .attr("x", d => x(d.label) + x.bandwidth() / 2)
-        .attr("y", chartHeight + 15)
+        .attr("y", chartHeight + 18)
         .attr("text-anchor", "middle")
+        .style("font-size", "10px")
+        .style("fill", (d, i) => colors[i % colors.length])
         .text(d => d.label);
 
-    // Values
+    // Values above bars
     svg.selectAll(".value")
         .data(data)
         .enter()
@@ -128,9 +135,11 @@ function drawBarChart(selector, data) {
         .attr("x", d => x(d.label) + x.bandwidth() / 2)
         .attr("y", d => {
             const pct = Math.min(d.value / d.max, 1);
-            return chartHeight - (chartHeight * pct) - 5;
+            return chartHeight - (chartHeight * pct) - 8;
         })
         .attr("text-anchor", "middle")
         .style("fill", "#fff")
+        .style("font-size", "11px")
+        .style("font-weight", "bold")
         .text(d => d.format(d.value));
 }
