@@ -5,8 +5,12 @@ function loadAttributeData(callback) {
         Neutralino.filesystem.readFile('data/demographics_data.csv').then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile('data/communications_data.csv').then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile('data/energy_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/transportation_data.csv').then(data => d3.csvParse(data))
-    ]).then(([economy, demographics, communications, energy, transportation]) => {
+        Neutralino.filesystem.readFile('data/transportation_data.csv').then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/good_country_index_option3.csv').then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/earning_potential_epi_future.csv').then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv').then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv').then(data => d3.csvParse(data))
+    ]).then(([economy, demographics, communications, energy, transportation, goodCountryIndex, earningPotentialIndex, safetyIndex, healthIndex]) => {
         const economyData = {};
         economy.forEach(d => {
             economyData[d.Country.toUpperCase()] = d;
@@ -32,8 +36,28 @@ function loadAttributeData(callback) {
             transData[d.Country.toUpperCase()] = d;
         });
 
+        const goodCountryData = {};
+        goodCountryIndex.forEach(d => {
+            goodCountryData[d.Country.toUpperCase()] = d;
+        });
+
+        const earningPotentialData = {};
+        earningPotentialIndex.forEach(d => {
+            earningPotentialData[d.COUNTRY.toUpperCase()] = d;
+        });
+
+        const safetyData = {};
+        safetyIndex.forEach(d => {
+            safetyData[d.Country.toUpperCase()] = d;
+        });
+
+        const healthData = {};
+        healthIndex.forEach(d => {
+            healthData[d.Country.toUpperCase()] = d;
+        });
+
         console.log('Attribute data loaded');
-        const result = { economyData, demographicsData, commData, energyData, transData };
+        const result = { economyData, demographicsData, commData, energyData, transData, goodCountryData, earningPotentialData, safetyData, healthData };
         if (typeof callback === 'function') callback(null, result);
         return result;
     }).catch(err => {

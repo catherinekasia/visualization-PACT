@@ -35,6 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
             commData: {},
             energyData: {},
             transData: {},
+            goodCountryData: {},
+            earningPotentialData: {},
+            safetyData: {},
+            healthData: {},
             map: null,
         };
 
@@ -44,7 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 appState.economyData,
                 appState.demographicsData,
                 appState.commData,
-                appState.energyData
+                appState.energyData,
+                appState.goodCountryData,
+                appState.earningPotentialData,
+                appState.safetyData,
+                appState.healthData
             );
         }
 
@@ -81,6 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         appState.commData = attributeData.commData;
                         appState.energyData = attributeData.energyData;
                         appState.transData = attributeData.transData;
+                        appState.goodCountryData = attributeData.goodCountryData;
+                        appState.earningPotentialData = attributeData.earningPotentialData;
+                        appState.safetyData = attributeData.safetyData;
+                        appState.healthData = attributeData.healthData;
                     }).catch(err => {
                         // already logged in loader
                     });

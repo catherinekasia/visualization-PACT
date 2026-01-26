@@ -20,7 +20,7 @@ function initPopup() {
     }
 }
 
-function openPopup(feature, economyData, demographicsData, commData, energyData) {
+function openPopup(feature, economyData, demographicsData, commData, energyData, goodCountryData, earningPotentialData, safetyData, healthData) {
         // Helper: map country name to ISO 2-letter code
         function getCountryCode(name) {
             const map = {
@@ -58,6 +58,10 @@ function openPopup(feature, economyData, demographicsData, commData, energyData)
 
     const eco = economyData[nameUpper] || {};
     const demo = demographicsData[nameUpper] || {};
+    const goodCountry = (goodCountryData && goodCountryData[nameUpper]) || {};
+    const earningPotential = (earningPotentialData && earningPotentialData[nameUpper]) || {};
+    const safety = (safetyData && safetyData[nameUpper]) || {};
+    const health = (healthData && healthData[nameUpper]) || {};
 
     // Calculate Happiness Index (Mock Logic)
     // Based on GDP per capita and Infant Mortality (inverse)
@@ -93,8 +97,34 @@ function openPopup(feature, economyData, demographicsData, commData, energyData)
             };
         }
     document.getElementById('modal-happiness-val').textContent = happiness;
-    document.getElementById('modal-overview-text').textContent =
-        `${name} has a population of ${formatNumber(demo.Total_Population)} and a GDP per capita of $${formatNumber(eco.Real_GDP_per_Capita_USD)}.`;
+    
+    // Format index values
+    const goodCountryIndexVal = goodCountry.good_country_index ? parseFloat(goodCountry.good_country_index).toFixed(2) : 'N/A';
+    const earningPotentialVal = earningPotential.EPI_future ? parseFloat(earningPotential.EPI_future).toFixed(2) : 'N/A';
+    const safetyIndexVal = safety.safety_index_risk_focused ? parseFloat(safety.safety_index_risk_focused).toFixed(2) : 'N/A';
+    const healthIndexVal = health.health_index ? parseFloat(health.health_index).toFixed(2) : 'N/A';
+    
+    // Build index list HTML
+    const overviewEl = document.getElementById('modal-overview-text');
+    overviewEl.innerHTML = `${name} has a population of ${formatNumber(demo.Total_Population)} and has the following index values:
+        <ul style="margin: 10px 0; padding-left: 20px;">
+            <li><strong>Good Country Index:</strong> ${goodCountryIndexVal}</li>
+            <li><strong>Earning Potential Index:</strong> ${earningPotentialVal}</li>
+            <li><strong>Safety Index:</strong> ${safetyIndexVal}</li>
+            <li><strong>Health Index:</strong> ${healthIndexVal}</li>
+        </ul>
+        <a href="#" id="explain-indexes-link" style="color: #4a90d9; text-decoration: underline; cursor: pointer;">How are these indexes calculated?</a>`;
+    
+    // Add click handler for explanation link using onclick directly
+    const explainLink = document.getElementById('explain-indexes-link');
+    if (explainLink) {
+        explainLink.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openIndexExplanationPopup();
+            return false;
+        };
+    }
 
     document.getElementById('modal-gdp').textContent = eco.Real_GDP_PPP_billion_USD ? `$${eco.Real_GDP_PPP_billion_USD} B` : 'N/A';
     document.getElementById('modal-population').textContent = demo.Total_Population ? formatNumber(demo.Total_Population) : 'N/A';
@@ -166,4 +196,71 @@ function drawCharts(feature, economyData, demographicsData, commData, energyData
     ];
 
     drawBarChart("#chart-bar", barData);
+}
+
+function openIndexExplanationPopup() {
+    console.log('Opening index explanation popup');
+    // Check if modal already exists
+    let explainModal = document.getElementById('index-explanation-modal');
+    
+    if (!explainModal) {
+        console.log('Creating new explanation modal');
+        // Create the modal dynamically
+        explainModal = document.createElement('div');
+        explainModal.id = 'index-explanation-modal';
+        explainModal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;';
+        
+        explainModal.innerHTML = `
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; padding: 30px; max-width: 600px; max-height: 80vh; overflow-y: auto; margin: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: #fff; margin: 0;">How Indexes Are Calculated</h2>
+                    <button id="close-explain-modal" style="background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+                </div>
+                
+                <div style="color: #e0e0e0; line-height: 1.6;">
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        <h3 style="color: #4a90d9; margin: 0 0 10px 0;">🌍 Good Country Index</h3>
+                        <p style="margin: 0;">From a scale of 0 to 100, with higher scores indicating a "better" country. This index was created by taking into account the healthcare available, life expectancy, the safety, economic stability, and earning potential of each country. It is meant to be used as a generalized index of each country. </p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        <h3 style="color: #4a90d9; margin: 0 0 10px 0;">💰 Earning Potential Index (EPI)</h3>
+                        <p style="margin: 0;">Evaluates future earning potential based on GDP per capita, GDP growth rate, normalized unemployment rate, and inflation rate. The index normalizes these factors and weighs them to predict economic opportunity for individuals in each country. The higher the value, the higher the earning potential.</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        <h3 style="color: #4a90d9; margin: 0 0 10px 0;">🛡️ Safety Index</h3>
+                        <p style="margin: 0;">A risk-focused measure combining the global terrorism index, global peace index, and crime index. Each component is normalized and inverted (where applicable) so higher scores indicate safer countries. Factors include criminal rates, arrests, and conflict levels.</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        <h3 style="color: #4a90d9; margin: 0 0 10px 0;">🏥 Health Index</h3>
+                        <p style="margin: 0;">This index provides an overall view of the health of citizens in each country. The index factors in a life expectancy index, infant mortality rate, and a healthcare availability index. Higher scores indicate better overall health outcomes.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(explainModal);
+        
+        // Add close handlers
+        const closeBtn = document.getElementById('close-explain-modal');
+        if (closeBtn) {
+            closeBtn.onclick = function() {
+                closeIndexExplanationPopup();
+            };
+        }
+        explainModal.onclick = function(e) {
+            if (e.target === explainModal) closeIndexExplanationPopup();
+        };
+    } else {
+        explainModal.style.display = 'flex';
+    }
+}
+
+function closeIndexExplanationPopup() {
+    const explainModal = document.getElementById('index-explanation-modal');
+    if (explainModal) {
+        explainModal.style.display = 'none';
+    }
 }
