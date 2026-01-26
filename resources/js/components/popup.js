@@ -2,6 +2,56 @@ let modal = null;
 let closeBtn = null;
 let onCloseDeselect = null;
 
+// Normalize country names from GeoJSON to match data file naming conventions
+function normalizeCountryName(name) {
+    const nameMap = {
+        "TURKEY": "TURKEY (TURKIYE)",
+        "TURKIYE": "TURKEY (TURKIYE)",
+        "TÜRKİYE": "TURKEY (TURKIYE)",
+        "UNITED STATES OF AMERICA": "UNITED STATES",
+        "USA": "UNITED STATES",
+        "CZECH REPUBLIC": "CZECHIA",
+        "COCOS ISLANDS": "COCOS (KEELING) ISLANDS",
+        "KEELING ISLANDS": "COCOS (KEELING) ISLANDS",
+        "DEMOCRATIC REPUBLIC OF THE CONGO": "CONGO, DEMOCRATIC REPUBLIC OF THE",
+        "DR CONGO": "CONGO, DEMOCRATIC REPUBLIC OF THE",
+        "REPUBLIC OF THE CONGO": "CONGO, REPUBLIC OF THE",
+        "IVORY COAST": "COTE D'IVOIRE",
+        "CÔTE D'IVOIRE": "COTE D'IVOIRE",
+        "SWAZILAND": "ESWATINI",
+        "BURMA": "MYANMAR",
+        "RUSSIAN FEDERATION": "RUSSIA",
+        "REPUBLIC OF KOREA": "SOUTH KOREA",
+        "KOREA, REPUBLIC OF": "SOUTH KOREA",
+        "DEMOCRATIC PEOPLE'S REPUBLIC OF KOREA": "NORTH KOREA",
+        "KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF": "NORTH KOREA",
+        "UNITED REPUBLIC OF TANZANIA": "TANZANIA",
+        "SYRIAN ARAB REPUBLIC": "SYRIA",
+        "PALESTINIAN TERRITORIES": "PALESTINE",
+        "WEST BANK AND GAZA": "PALESTINE",
+        "LAO PEOPLE'S DEMOCRATIC REPUBLIC": "LAOS",
+        "VIET NAM": "VIETNAM",
+        "BRUNEI DARUSSALAM": "BRUNEI",
+        "TIMOR LESTE": "TIMOR-LESTE",
+        "EAST TIMOR": "TIMOR-LESTE",
+        "CAPE VERDE": "CABO VERDE",
+        "REPUBLIC OF SERBIA": "SERBIA",
+        "THE BAHAMAS": "BAHAMAS",
+        "THE GAMBIA": "GAMBIA",
+        "BOSNIA AND HERZ.": "BOSNIA AND HERZEGOVINA",
+        "CENTRAL AFRICAN REP.": "CENTRAL AFRICAN REPUBLIC",
+        "S. SUDAN": "SOUTH SUDAN",
+        "EQ. GUINEA": "EQUATORIAL GUINEA",
+        "SOLOMON IS.": "SOLOMON ISLANDS",
+        "FALKLAND IS.": "FALKLAND ISLANDS",
+        "SOMALILAND": "SOMALIA",
+        "N. CYPRUS": "CYPRUS",
+        "NORTHERN CYPRUS": "CYPRUS"
+    };
+    const upper = name.toUpperCase().trim();
+    return nameMap[upper] || upper;
+}
+
 function initPopup() {
     // Accept an optional deselect callback when initializing
     const args = Array.from(arguments);
@@ -55,13 +105,14 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
     }
     const name = feature.properties.name || feature.properties.ADMIN || 'Unknown Country';
     const nameUpper = name.toUpperCase();
+    const normalizedName = normalizeCountryName(name);
 
-    const eco = economyData[nameUpper] || {};
-    const demo = demographicsData[nameUpper] || {};
-    const goodCountry = (goodCountryData && goodCountryData[nameUpper]) || {};
-    const earningPotential = (earningPotentialData && earningPotentialData[nameUpper]) || {};
-    const safety = (safetyData && safetyData[nameUpper]) || {};
-    const health = (healthData && healthData[nameUpper]) || {};
+    const eco = economyData[normalizedName] || economyData[nameUpper] || {};
+    const demo = demographicsData[normalizedName] || demographicsData[nameUpper] || {};
+    const goodCountry = (goodCountryData && (goodCountryData[normalizedName] || goodCountryData[nameUpper])) || {};
+    const earningPotential = (earningPotentialData && (earningPotentialData[normalizedName] || earningPotentialData[nameUpper])) || {};
+    const safety = (safetyData && (safetyData[normalizedName] || safetyData[nameUpper])) || {};
+    const health = (healthData && (healthData[normalizedName] || healthData[nameUpper])) || {};
 
     // Calculate Happiness Index (Mock Logic)
     // Based on GDP per capita and Infant Mortality (inverse)
@@ -148,15 +199,16 @@ function closePopup() {
 function drawCharts(feature, economyData, demographicsData, commData, energyData, goodCountryData, earningPotentialData, safetyData, healthData) {
     const name = feature.properties.name || feature.properties.ADMIN || 'Unknown Country';
     const nameUpper = name.toUpperCase();
+    const normalizedName = normalizeCountryName(name);
 
-    const eco = economyData[nameUpper] || {};
-    const demo = demographicsData[nameUpper] || {};
-    const comm = commData[nameUpper] || {};
-    const energy = energyData[nameUpper] || {};
-    const goodCountry = (goodCountryData && goodCountryData[nameUpper]) || {};
-    const earningPotential = (earningPotentialData && earningPotentialData[nameUpper]) || {};
-    const safety = (safetyData && safetyData[nameUpper]) || {};
-    const health = (healthData && healthData[nameUpper]) || {};
+    const eco = economyData[normalizedName] || economyData[nameUpper] || {};
+    const demo = demographicsData[normalizedName] || demographicsData[nameUpper] || {};
+    const comm = commData[normalizedName] || commData[nameUpper] || {};
+    const energy = energyData[normalizedName] || energyData[nameUpper] || {};
+    const goodCountry = (goodCountryData && (goodCountryData[normalizedName] || goodCountryData[nameUpper])) || {};
+    const earningPotential = (earningPotentialData && (earningPotentialData[normalizedName] || earningPotentialData[nameUpper])) || {};
+    const safety = (safetyData && (safetyData[normalizedName] || safetyData[nameUpper])) || {};
+    const health = (healthData && (healthData[normalizedName] || healthData[nameUpper])) || {};
 
     // --- Radar Data using Raw Data Values ---
     // Literacy Rate (0-100%)
