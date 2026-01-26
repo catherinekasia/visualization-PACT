@@ -114,22 +114,9 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
     const safety = (safetyData && (safetyData[normalizedName] || safetyData[nameUpper])) || {};
     const health = (healthData && (healthData[normalizedName] || healthData[nameUpper])) || {};
 
-    // Calculate Happiness Index (Mock Logic)
-    // Based on GDP per capita and Infant Mortality (inverse)
-    let happiness = 5.0; // Default
-    let gdp = parseFloat(eco.Real_GDP_per_Capita_USD || 0);
-    let mortality = parseFloat(demo.Infant_Mortality_Rate || 0);
-
-    if (gdp > 0) {
-        // Log scale for GDP: 0 to 100k -> 0 to 1
-        const gdpScore = Math.min(Math.log10(gdp) / 5, 1) * 10;
-        // Mortality: 100 to 0 -> 0 to 1
-        const mortScore = Math.max(0, (100 - mortality) / 10);
-
-        happiness = (gdpScore * 0.6 + mortScore * 0.4).toFixed(1);
-    } else {
-        happiness = (Math.random() * 4 + 3).toFixed(1); // Random 3-7 if no data
-    }
+    // Get Life Expectancy from health data
+    const lifeExpectancyVal = parseFloat(health.life_expectancy);
+    const lifeExpectancy = !isNaN(lifeExpectancyVal) ? lifeExpectancyVal.toFixed(1) + ' yrs' : 'N/A';
 
     // Update UI
         document.getElementById('modal-country-name').textContent = name;
@@ -147,7 +134,7 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
                 console.error('Flag failed to load:', flagPath);
             };
         }
-    document.getElementById('modal-happiness-val').textContent = happiness;
+    document.getElementById('modal-happiness-val').textContent = lifeExpectancy;
     
     // Format index values
     const goodCountryIndexVal = goodCountry.good_country_index ? parseFloat(goodCountry.good_country_index).toFixed(2) : 'N/A';
