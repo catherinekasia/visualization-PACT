@@ -131,7 +131,7 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
     setTimeout(() => {
         modal.classList.add('active');
         // Draw charts after modal is visible and has dimensions
-        drawCharts(feature, economyData, demographicsData, commData, energyData);
+        drawCharts(feature, economyData, demographicsData, commData, energyData, goodCountryData, earningPotentialData, safetyData, healthData);
     }, 10);
 }
 
@@ -145,7 +145,7 @@ function closePopup() {
     }, 300);
 }
 
-function drawCharts(feature, economyData, demographicsData, commData, energyData) {
+function drawCharts(feature, economyData, demographicsData, commData, energyData, goodCountryData, earningPotentialData, safetyData, healthData) {
     const name = feature.properties.name || feature.properties.ADMIN || 'Unknown Country';
     const nameUpper = name.toUpperCase();
 
@@ -153,29 +153,41 @@ function drawCharts(feature, economyData, demographicsData, commData, energyData
     const demo = demographicsData[nameUpper] || {};
     const comm = commData[nameUpper] || {};
     const energy = energyData[nameUpper] || {};
+    const goodCountry = (goodCountryData && goodCountryData[nameUpper]) || {};
+    const earningPotential = (earningPotentialData && earningPotentialData[nameUpper]) || {};
+    const safety = (safetyData && safetyData[nameUpper]) || {};
+    const health = (healthData && healthData[nameUpper]) || {};
 
-    // --- Radar Data ---
+    // --- Radar Data using Raw Data Values ---
+    // Literacy Rate (0-100%)
     let literacy = parseFloat((demo.Total_Literacy_Rate || '0').replace('%', '')) || 0;
+    
+    // Electricity Access (0-100%)
     let electricity = parseFloat(energy.electricity_access_percent) || 0;
-
+    
+    // Employment Rate (100 - unemployment rate, 0-100%)
+    let employment = 100 - (parseFloat(eco.Unemployment_Rate_percent) || 0);
+    if (employment < 0) employment = 0;
+    if (employment > 100) employment = 100;
+    
+    // Internet Penetration (internet users / population * 100)
     let population = parseFloat(demo.Total_Population) || 1;
     let internetUsers = parseFloat(comm.internet_users_total) || 0;
     let internet = (internetUsers / population) * 100;
     if (internet > 100) internet = 100;
-
-    let mobileSubs = parseFloat(comm.mobile_cellular_subscriptions_total) || 0;
-    let mobile = (mobileSubs / population) * 100;
-    if (mobile > 100) mobile = 100;
-
-    let mortality = parseFloat(demo.Infant_Mortality_Rate) || 0;
-    let health = Math.max(0, 100 - mortality);
+    
+    // Life Expectancy (normalized to 0-100, where 50 years = 0 and 90 years = 100)
+    let lifeExpectancy = parseFloat(health.life_expectancy) || 0;
+    let lifeExpectancyScore = ((lifeExpectancy - 50) / 40) * 100;
+    if (lifeExpectancyScore < 0) lifeExpectancyScore = 0;
+    if (lifeExpectancyScore > 100) lifeExpectancyScore = 100;
 
     const radarData = [
         { axis: "Literacy", value: literacy },
         { axis: "Electricity", value: electricity },
+        { axis: "Employment", value: employment },
         { axis: "Internet", value: internet },
-        { axis: "Mobile", value: mobile },
-        { axis: "Health", value: health }
+        { axis: "Life Exp", value: lifeExpectancyScore }
     ];
 
     drawRadarChart("#chart-radar", radarData);
