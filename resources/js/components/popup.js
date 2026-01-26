@@ -126,10 +126,6 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
         };
     }
 
-    document.getElementById('modal-gdp').textContent = eco.Real_GDP_PPP_billion_USD ? `$${eco.Real_GDP_PPP_billion_USD} B` : 'N/A';
-    document.getElementById('modal-population').textContent = demo.Total_Population ? formatNumber(demo.Total_Population) : 'N/A';
-    document.getElementById('modal-area').textContent = feature.properties.pop_est ? 'N/A' : 'N/A'; // GeoJSON might not have area
-
     modal.style.display = 'flex';
     // Small delay to allow display:flex to apply before opacity transition
     setTimeout(() => {
