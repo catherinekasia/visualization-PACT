@@ -18,38 +18,42 @@ function initMap(canvas, initialCountries, onCountrySelected) {
         .scale(width / (2 * Math.PI))
         .translate([width / 2, height / 2]);
 
-    // Countries we want to visually de-emphasize and make non-interactive
-    // (Africa, Asia, Oceania, South America, Central America, Antarctica)
-    // list uses ISO3166-1 Alpha-2 codes.
-    const disabledIso2 = new Set([
-        // Africa
-        'DZ','AO','BJ','BW','BF','BI','CM','CV','CF','TD','KM','CG','CD','CI','DJ','EG','GQ','ER','ET','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MU','MA','MZ','NA','NE','NG','RW','ST','SN','SC','SL','SO','ZA','SS','SD','SZ','TZ','TG','TN','UG','EH','ZM','ZW',
-        // Asia 
-        'AF','AM','AZ','BH','BD','BT','BN','KH','CN','CY','GE','IN','ID','IR','IQ','IL','JO','KZ','KW','KG','LA','LB','MY','MV','MN','MM','NP','KP','OM','PK','PS','PH','QA','SA','SG','LK','SY','TJ','TH','TL','TM','AE','UZ','VN','YE',
+    // Countries we ALLOW - all others are disabled
+    // Europe, select East Asia, Oceania (AU/NZ), North America (CA/US/MX/Greenland)
+    const allowedIso2 = new Set([
+        // Europe
+        'PT', 'ES', 'AD', 'MC', 'FR', 'GB', 'IE', 'IT', 'MT', 'LU', 'BE', 'NL', 'DE', 'CH', 'AT', 
+        'SI', 'HR', 'BA', 'ME', 'AL', 'GR', 'TR', 'BG', 'MK', 'XK', 'RS', 'HU', 'SK', 'CZ', 'PL', 
+        'UA', 'RO', 'MD', 'BY', 'RU', 'LT', 'LV', 'EE', 'FI', 'SE', 'NO', 'DK', 'LI', 'IS',
+        // East Asia
+        'JP', 'KR', 'TW', 'CN', 'SG',
         // Oceania
-        'FJ','PG','SB','VU','NC','PF','KI','TO','WS','MH','FM','NR','TV','GU',
-        // South America
-        'AR','BO','BR','CL','CO','EC','GY','PE','PY','SR','UY','VE','GF','FK',
-        // Central America (exclude Mexico)
-        'BZ','CR','SV','GT','HN','NI','PA',
-        // Antarctica
-        'AQ',
-        // Caribbean (islands and territories)
-        'AI','AW','BS','BB','BM','CW','DM','DO','GD','GP','GY','HT','JM','KN','LC','MQ','MS','PR','SX','TC','TT','VC','VG','VI','BQ','BL','MF','CU'
+        'AU', 'NZ',
+        // North America
+        'CA', 'US', 'MX', 'GL'
     ]);
 
-    // fixes for countries idk codes for
-    const disabledNames = new Set([
-        'SOMALILAND', 'ANTIGUA AND BARBUDA', 'CAYMAN ISLANDS', 'BAYKONUR COSMODROME', 'NORTHERN CYPRUS', "SOUTH GEORGIA AND THE ISLANDS", 'FRENCH SOUTHERN AND ANTARCTIC LANDS', 'HEARD ISLAND AND MCDONALD ISLANDS', 'FAROE ISLANDS', 'ALAND', 'ISLE OF MAN'
+    // Allowed country names (for countries without standard ISO codes in GeoJSON)
+    const allowedNames = new Set([
+        'PORTUGAL', 'SPAIN', 'ANDORRA', 'MONACO', 'FRANCE', 'UNITED KINGDOM', 'IRELAND', 'ITALY', 
+        'MALTA', 'LUXEMBOURG', 'BELGIUM', 'NETHERLANDS', 'GERMANY', 'SWITZERLAND', 'AUSTRIA',
+        'SLOVENIA', 'CROATIA', 'BOSNIA AND HERZEGOVINA', 'MONTENEGRO', 'ALBANIA', 'GREECE', 
+        'TURKEY', 'TURKEY (TURKIYE)', 'BULGARIA', 'NORTH MACEDONIA', 'KOSOVO', 'SERBIA', 'HUNGARY', 
+        'SLOVAKIA', 'CZECHIA', 'CZECH REPUBLIC', 'POLAND', 'UKRAINE', 'ROMANIA', 'MOLDOVA', 
+        'REPUBLIC OF MOLDOVA', 'BELARUS', 'RUSSIA', 'RUSSIAN FEDERATION', 'LITHUANIA', 'LATVIA', 
+        'ESTONIA', 'FINLAND', 'SWEDEN', 'NORWAY', 'DENMARK', 'LIECHTENSTEIN', 'ICELAND',
+        'JAPAN', 'SOUTH KOREA', 'KOREA, SOUTH', 'TAIWAN', 'CHINA', 'SINGAPORE',
+        'AUSTRALIA', 'NEW ZEALAND',
+        'CANADA', 'UNITED STATES', 'UNITED STATES OF AMERICA', 'USA', 'MEXICO', 'GREENLAND'
     ]);
 
     function isDisabledCountry(feature) {
-        if (!feature || !feature.properties) return false;
+        if (!feature || !feature.properties) return true;
         const iso = (feature.properties['ISO3166-1-Alpha-2'] || feature.properties.ISO_A2 || feature.properties.iso_a2 || '').toUpperCase();
-        if (iso && disabledIso2.has(iso)) return true;
+        if (iso && allowedIso2.has(iso)) return false;
         const name = (feature.properties.name || '').toUpperCase();
-        if (name && disabledNames.has(name)) return true;
-        return false;
+        if (name && allowedNames.has(name)) return false;
+        return true;
     }
 
     const path = d3.geoPath().projection(projection);
