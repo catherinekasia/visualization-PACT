@@ -148,14 +148,15 @@
       stroke-width: 1.5;
     }
     
-    .pc-line:hover {
-      stroke-opacity: 1;
-      stroke-width: 2.5;
+    .pc-line:hover,
+    .pc-line.hovered {
+      stroke-opacity: 1 !important;
+      stroke-width: 3 !important;
     }
     
     .pc-line.highlighted {
-      stroke-opacity: 1;
-      stroke-width: 2.5;
+      stroke-opacity: 1 !important;
+      stroke-width: 3 !important;
     }
     
     .pc-line.dimmed {
@@ -181,14 +182,14 @@
       transition: all 0.2s;
     }
     
-    .scatter-dot:hover {
-      fill-opacity: 1;
+    .scatter-dot:hover,
+    .scatter-dot.hovered {
+      fill-opacity: 1 !important;
       stroke-width: 2;
-      r: 8;
     }
     
     .scatter-dot.highlighted {
-      fill-opacity: 1;
+      fill-opacity: 1 !important;
       stroke-width: 2;
     }
     

@@ -72,12 +72,12 @@ const pcDimensions = ['population', 'gdp_per_capita', 'life_expectancy', 'unempl
 // All colors have similar luminance for accessibility and visual balance
 const regionColors = {
     'Western Europe': '#5B8FF9',   // Blue
-    'Northern Europe': '#7DCEA0',  // Mint green
-    'Central Europe': '#5AD8A6',   // Teal
+    'Northern Europe': '#9D7FEA',  // Violet
+    'Central Europe': '#5AD8A6',   // Teal-green
     'Eastern Europe': '#F6BD16',   // Gold
     'East Asia': '#E86452',        // Coral
-    'North America': '#6DC8EC',    // Light blue
-    'Oceania': '#945FB9',          // Purple
+    'North America': '#6DC8EC',    // Sky blue
+    'Oceania': '#FF9845',          // Orange
     'Unknown': '#8C8C8C'           // Gray
 };
 
@@ -239,10 +239,9 @@ async function loadAllData() {
             region: getRegion(country)
         };
         
-        // Only include if we have at least some meaningful data
+        // Only include if we have at least population data
         const pop = variables.population.accessor(record);
-        const gdp = variables.gdp_per_capita.accessor(record);
-        if (pop && gdp) {
+        if (pop) {
             allData.push(record);
         }
     });
@@ -285,8 +284,11 @@ function setupEventListeners() {
     document.getElementById('scatter-y').addEventListener('change', drawScatterPlot);
     document.getElementById('scatter-size').addEventListener('change', drawScatterPlot);
     
-    // Parallel coordinates color change
-    document.getElementById('pc-color-by').addEventListener('change', drawParallelCoordinates);
+    // Parallel coordinates color change - also update scatter plot to match
+    document.getElementById('pc-color-by').addEventListener('change', () => {
+        drawParallelCoordinates();
+        drawScatterPlot();
+    });
     
     // Country search
     const searchInput = document.getElementById('country-search');
@@ -326,13 +328,23 @@ function highlightCountry(countryName) {
 function clearHighlight() {
     highlightedCountry = null;
     
+    // Clear legend filter state
+    activeLegendFilter = null;
+    updateLegendActiveState(null);
+    
     d3.selectAll('.pc-line')
         .classed('highlighted', false)
-        .classed('dimmed', false);
+        .classed('dimmed', false)
+        .classed('legend-highlighted', false)
+        .classed('legend-dimmed', false)
+        .classed('hovered', false);
     
     d3.selectAll('.scatter-dot')
         .classed('highlighted', false)
-        .classed('dimmed', false);
+        .classed('dimmed', false)
+        .classed('legend-highlighted', false)
+        .classed('legend-dimmed', false)
+        .classed('hovered', false);
 }
 
 // Tooltip functions
@@ -492,16 +504,20 @@ function drawParallelCoordinates() {
         .attr('d', path)
         .style('stroke', colorScale)
         .on('mouseover', function(event, d) {
-            d3.select(this).raise().style('stroke-opacity', 1).style('stroke-width', 3);
+            d3.select(this).raise().classed('hovered', true);
             showTooltip(event, d);
         })
         .on('mouseout', function(event, d) {
-            if (highlightedCountry !== d.country) {
-                d3.select(this).style('stroke-opacity', 0.4).style('stroke-width', 1.5);
-            }
+            d3.select(this).classed('hovered', false);
             hideTooltip();
         })
         .on('click', function(event, d) {
+            // Clear any active legend filter first
+            if (activeLegendFilter) {
+                activeLegendFilter = null;
+                clearLegendHighlight();
+                updateLegendActiveState(null);
+            }
             document.getElementById('country-search').value = formatCountryName(d.country);
             highlightCountry(d.country);
         });
@@ -750,8 +766,57 @@ function drawScatterPlot() {
             .range([4, 25]);
     }
     
-    // Color by region
-    const colorScale = d => regionColors[d.region] || '#64748b';
+    // Color scale - match PCP color scheme
+    const colorBy = document.getElementById('pc-color-by').value;
+    const gdpColors = ['#f0f9e8', '#7bccc4', '#43a2ca', '#0868ac', '#084081'];
+    const popColors = ['#fef0d9', '#fdcc8a', '#fc8d59', '#d7301f', '#7f0000'];
+    
+    // Simple color scale - fall back to region if issues
+    let colorScale = d => regionColors[d.region] || '#64748b';
+    
+    try {
+        if (colorBy === 'gdp' && filteredData.length >= 5) {
+            const gdpValues = filteredData
+                .map(d => variables.gdp_per_capita.accessor(d))
+                .filter(v => v !== null)
+                .sort((a, b) => a - b);
+            if (gdpValues.length >= 5) {
+                const thresholds = [0.2, 0.4, 0.6, 0.8].map(q => 
+                    gdpValues[Math.floor(q * gdpValues.length)]
+                );
+                colorScale = d => {
+                    const val = variables.gdp_per_capita.accessor(d);
+                    if (val === null) return '#64748b';
+                    if (val < thresholds[0]) return gdpColors[0];
+                    if (val < thresholds[1]) return gdpColors[1];
+                    if (val < thresholds[2]) return gdpColors[2];
+                    if (val < thresholds[3]) return gdpColors[3];
+                    return gdpColors[4];
+                };
+            }
+        } else if (colorBy === 'population' && filteredData.length >= 5) {
+            const popValues = filteredData
+                .map(d => variables.population.accessor(d))
+                .filter(v => v !== null)
+                .sort((a, b) => a - b);
+            if (popValues.length >= 5) {
+                const thresholds = [0.2, 0.4, 0.6, 0.8].map(q => 
+                    popValues[Math.floor(q * popValues.length)]
+                );
+                colorScale = d => {
+                    const val = variables.population.accessor(d);
+                    if (val === null) return '#64748b';
+                    if (val < thresholds[0]) return popColors[0];
+                    if (val < thresholds[1]) return popColors[1];
+                    if (val < thresholds[2]) return popColors[2];
+                    if (val < thresholds[3]) return popColors[3];
+                    return popColors[4];
+                };
+            }
+        }
+    } catch (e) {
+        console.error('Color scale error:', e);
+    }
     
     // Add axes
     svg.append('g')
@@ -805,7 +870,7 @@ function drawScatterPlot() {
         })
         .attr('fill', colorScale)
         .on('mouseover', function(event, d) {
-            d3.select(this).raise();
+            d3.select(this).raise().classed('hovered', true);
             showTooltip(event, d, {
                 x: xConfig.accessor(d),
                 xLabel: xConfig.label,
@@ -815,8 +880,17 @@ function drawScatterPlot() {
                 yFormat: yConfig.format
             });
         })
-        .on('mouseout', hideTooltip)
+        .on('mouseout', function() {
+            d3.select(this).classed('hovered', false);
+            hideTooltip();
+        })
         .on('click', function(event, d) {
+            // Clear any active legend filter first
+            if (activeLegendFilter) {
+                activeLegendFilter = null;
+                clearLegendHighlight();
+                updateLegendActiveState(null);
+            }
             document.getElementById('country-search').value = formatCountryName(d.country);
             highlightCountry(d.country);
         });
