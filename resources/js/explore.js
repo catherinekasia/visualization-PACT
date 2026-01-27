@@ -278,14 +278,18 @@ function showTooltip(event, d, extraInfo = {}) {
         html += `<p>${extraInfo.yLabel}: <span class="value">${extraInfo.yFormat(extraInfo.y)}</span></p>`;
     }
     
-    // Add some key stats
+    // Add key stats for migrants
     const pop = variables.population.accessor(d);
     const gdp = variables.gdp_per_capita.accessor(d);
     const life = variables.life_expectancy.accessor(d);
+    const safety = variables.safety.accessor(d);
+    const healthIdx = variables.health_index.accessor(d);
     
     if (pop && !extraInfo.x) html += `<p>Population: <span class="value">${variables.population.format(pop)}</span></p>`;
     if (gdp && !extraInfo.x) html += `<p>GDP/Capita: <span class="value">${variables.gdp_per_capita.format(gdp)}</span></p>`;
     if (life) html += `<p>Life Expectancy: <span class="value">${variables.life_expectancy.format(life)}</span></p>`;
+    if (safety) html += `<p>Safety Index: <span class="value">${variables.safety.format(safety)}</span></p>`;
+    if (healthIdx) html += `<p>Health Index: <span class="value">${variables.health_index.format(healthIdx)}</span></p>`;
     
     tooltip
         .style('display', 'block')
