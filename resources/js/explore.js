@@ -68,13 +68,17 @@ const variables = {
 // Parallel coordinates dimensions
 const pcDimensions = ['population', 'gdp_per_capita', 'life_expectancy', 'unemployment', 'literacy', 'safety'];
 
-// Region colors - only regions we're using
+// Region colors - isoluminant palette (constant perceived brightness ~L=65)
+// All colors have similar luminance for accessibility and visual balance
 const regionColors = {
-    'Europe': '#38bdf8',
-    'East Asia': '#f472b6',
-    'North America': '#4ade80',
-    'Oceania': '#fb923c',
-    'Unknown': '#64748b'
+    'Western Europe': '#5B8FF9',   // Blue
+    'Northern Europe': '#7DCEA0',  // Mint green
+    'Central Europe': '#5AD8A6',   // Teal
+    'Eastern Europe': '#F6BD16',   // Gold
+    'East Asia': '#E86452',        // Coral
+    'North America': '#6DC8EC',    // Light blue
+    'Oceania': '#945FB9',          // Purple
+    'Unknown': '#8C8C8C'           // Gray
 };
 
 // Visa/Migration Filter Groups
@@ -119,7 +123,22 @@ const allowedCountries = new Set([
 function getRegion(countryName) {
     const name = countryName.toUpperCase();
     
-    const europe = ['ALBANIA', 'ANDORRA', 'AUSTRIA', 'BELARUS', 'BELGIUM', 'BOSNIA', 'BULGARIA', 'CROATIA', 'CZECHIA', 'CZECH REPUBLIC', 'DENMARK', 'ESTONIA', 'FINLAND', 'FRANCE', 'GERMANY', 'GREECE', 'HUNGARY', 'ICELAND', 'IRELAND', 'ITALY', 'KOSOVO', 'LATVIA', 'LIECHTENSTEIN', 'LITHUANIA', 'LUXEMBOURG', 'MALTA', 'MOLDOVA', 'MONACO', 'MONTENEGRO', 'NETHERLANDS', 'NORTH MACEDONIA', 'NORWAY', 'POLAND', 'PORTUGAL', 'ROMANIA', 'RUSSIA', 'SERBIA', 'SLOVAKIA', 'SLOVENIA', 'SPAIN', 'SWEDEN', 'SWITZERLAND', 'TURKEY', 'UKRAINE', 'UNITED KINGDOM'];
+    // Western Europe: UK, Ireland, France, Benelux, Iberia, Italy, Switzerland
+    const westernEurope = ['ANDORRA', 'BELGIUM', 'FRANCE', 'IRELAND', 'ITALY', 
+        'LUXEMBOURG', 'MALTA', 'MONACO', 'NETHERLANDS', 'PORTUGAL', 'SPAIN', 
+        'SWITZERLAND', 'UNITED KINGDOM'];
+    
+    // Northern Europe: Nordic countries
+    const northernEurope = ['DENMARK', 'FINLAND', 'ICELAND', 'NORWAY', 'SWEDEN'];
+    
+    // Central Europe: Germany, Austria, Visegrad, Slovenia, Liechtenstein
+    const centralEurope = ['AUSTRIA', 'CROATIA', 'CZECHIA', 'CZECH REPUBLIC', 'GERMANY', 
+        'HUNGARY', 'LIECHTENSTEIN', 'POLAND', 'SLOVAKIA', 'SLOVENIA'];
+    
+    // Eastern Europe: Balkans, Baltics, former Soviet states, Greece, Turkey
+    const easternEurope = ['ALBANIA', 'BELARUS', 'BOSNIA', 'BULGARIA', 'ESTONIA', 'GREECE', 
+        'KOSOVO', 'LATVIA', 'LITHUANIA', 'MOLDOVA', 'MONTENEGRO', 'NORTH MACEDONIA', 
+        'ROMANIA', 'RUSSIA', 'SERBIA', 'TURKEY', 'UKRAINE'];
     
     const eastAsia = ['CHINA', 'JAPAN', 'KOREA', 'SINGAPORE', 'TAIWAN'];
     
@@ -127,7 +146,10 @@ function getRegion(countryName) {
     
     const oceania = ['AUSTRALIA', 'NEW ZEALAND'];
     
-    if (europe.some(c => name.includes(c))) return 'Europe';
+    if (westernEurope.some(c => name.includes(c))) return 'Western Europe';
+    if (northernEurope.some(c => name.includes(c))) return 'Northern Europe';
+    if (centralEurope.some(c => name.includes(c))) return 'Central Europe';
+    if (easternEurope.some(c => name.includes(c))) return 'Eastern Europe';
     if (eastAsia.some(c => name.includes(c))) return 'East Asia';
     if (northAmerica.some(c => name.includes(c))) return 'North America';
     if (oceania.some(c => name.includes(c))) return 'Oceania';
