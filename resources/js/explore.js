@@ -377,21 +377,55 @@ function drawParallelCoordinates() {
     const colorBy = document.getElementById('pc-color-by').value;
     let colorScale;
     
+    // Colorblind-friendly discrete palettes (5 categories, constant luminance progression)
+    // Blue palette for GDP - safe for red-green and blue-yellow colorblindness
+    const gdpColors = ['#f0f9e8', '#7bccc4', '#43a2ca', '#0868ac', '#084081'];
+    // Orange/Brown palette for Population - safe for colorblindness
+    const popColors = ['#fef0d9', '#fdcc8a', '#fc8d59', '#d7301f', '#7f0000'];
+    
     if (colorBy === 'region') {
         colorScale = d => regionColors[d.region] || '#64748b';
     } else if (colorBy === 'gdp') {
-        const gdpExtent = d3.extent(filteredData, d => variables.gdp_per_capita.accessor(d));
-        const gdpColorScale = d3.scaleSequential(d3.interpolateViridis).domain(gdpExtent);
+        // Use quantiles to create 5 even buckets (handles skewed data better)
+        const gdpValues = filteredData
+            .map(d => variables.gdp_per_capita.accessor(d))
+            .filter(v => v !== null)
+            .sort((a, b) => a - b);
+        
+        // Calculate quantile thresholds (20%, 40%, 60%, 80%)
+        const gdpThresholds = [0.2, 0.4, 0.6, 0.8].map(q => 
+            gdpValues[Math.floor(q * gdpValues.length)]
+        );
+        
         colorScale = d => {
             const val = variables.gdp_per_capita.accessor(d);
-            return val ? gdpColorScale(val) : '#64748b';
+            if (val === null) return '#64748b';
+            if (val < gdpThresholds[0]) return gdpColors[0];
+            if (val < gdpThresholds[1]) return gdpColors[1];
+            if (val < gdpThresholds[2]) return gdpColors[2];
+            if (val < gdpThresholds[3]) return gdpColors[3];
+            return gdpColors[4];
         };
     } else {
-        const popExtent = d3.extent(filteredData, d => variables.population.accessor(d));
-        const popColorScale = d3.scaleSequential(d3.interpolatePlasma).domain(popExtent);
+        // Population - use quantiles for even distribution
+        const popValues = filteredData
+            .map(d => variables.population.accessor(d))
+            .filter(v => v !== null)
+            .sort((a, b) => a - b);
+        
+        // Calculate quantile thresholds (20%, 40%, 60%, 80%)
+        const popThresholds = [0.2, 0.4, 0.6, 0.8].map(q => 
+            popValues[Math.floor(q * popValues.length)]
+        );
+        
         colorScale = d => {
             const val = variables.population.accessor(d);
-            return val ? popColorScale(val) : '#64748b';
+            if (val === null) return '#64748b';
+            if (val < popThresholds[0]) return popColors[0];
+            if (val < popThresholds[1]) return popColors[1];
+            if (val < popThresholds[2]) return popColors[2];
+            if (val < popThresholds[3]) return popColors[3];
+            return popColors[4];
         };
     }
     
@@ -473,6 +507,10 @@ function updateLegend(colorBy) {
     const legendContainer = document.getElementById('pc-legend');
     legendContainer.innerHTML = '';
     
+    // Colorblind-friendly discrete palettes (must match drawParallelCoordinates)
+    const gdpColors = ['#f0f9e8', '#7bccc4', '#43a2ca', '#0868ac', '#084081'];
+    const popColors = ['#fef0d9', '#fdcc8a', '#fc8d59', '#d7301f', '#7f0000'];
+    
     if (colorBy === 'region') {
         Object.entries(regionColors).forEach(([region, color]) => {
             if (region === 'Unknown') return;
@@ -481,13 +519,22 @@ function updateLegend(colorBy) {
             item.innerHTML = `<span class="legend-color" style="background:${color}"></span>${region}`;
             legendContainer.appendChild(item);
         });
+    } else if (colorBy === 'gdp') {
+        const labels = ['Lowest 20%', 'Low', 'Medium', 'High', 'Highest 20%'];
+        gdpColors.forEach((color, i) => {
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            item.innerHTML = `<span class="legend-color" style="background:${color}"></span>${labels[i]}`;
+            legendContainer.appendChild(item);
+        });
     } else {
-        const item = document.createElement('div');
-        item.className = 'legend-item';
-        item.innerHTML = colorBy === 'gdp' 
-            ? 'Color: Low → High GDP per Capita' 
-            : 'Color: Low → High Population';
-        legendContainer.appendChild(item);
+        const labels = ['Lowest 20%', 'Low', 'Medium', 'High', 'Highest 20%'];
+        popColors.forEach((color, i) => {
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            item.innerHTML = `<span class="legend-color" style="background:${color}"></span>${labels[i]}`;
+            legendContainer.appendChild(item);
+        });
     }
 }
 
