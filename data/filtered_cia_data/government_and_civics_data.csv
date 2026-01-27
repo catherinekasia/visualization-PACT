@@ -1,8 +1,8 @@
 Country,Capital,Capital_Coordinates,Government_Type,Suffrage_Age
 ALBANIA,Tirana,"41 19 N, 19 49 E",Republic,18.0
 ANDORRA,Andorra la Vella,"42 30 N, 1 31 E",Democracy,18.0
-ARCTIC OCEAN,,,Other, 18.0
-ATLANTIC OCEAN,,,Other, 18.0
+ARCTIC OCEAN,,,Other,18.0
+ATLANTIC OCEAN,,,Other,18.0
 AUSTRALIA,Canberra,"35 16 S, 149 08 E",Democracy,18.0
 AUSTRIA,Vienna,"48 12 N, 16 22 E",Republic,16.0
 BELARUS,Minsk,"53 54 N, 27 34 E",Republic,18.0
@@ -68,5 +68,3 @@ UKRAINE,Kyiv,"50 26 N, 30 31 E",Republic,18.0
 UNITED KINGDOM,London,"51 30 N, 0 05 W",Monarchy,18.0
 UNITED STATES,"Washington, DC","38 53 N, 77 02 W",Republic,18.0
 VIETNAM,Hanoi,"21 02 N, 105 51 E",Communist,18.0
-WORLD,,,0 00 N, 0 00 E,Other,18.0
-HONG KONG, Hong Kong, "22 17 N, 114 09 E",Republic,18.0

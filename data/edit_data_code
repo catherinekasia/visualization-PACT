@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import re
 
 DISABLED_COUNTRIES = {
     # Africa
@@ -57,17 +58,126 @@ DISABLED_COUNTRIES = {
 }
 
 def detect_country_column(df):
-    # compare in lowercase only
+    """Detect the country column name."""
     possible = {"country", "country_name", "country name", "name"}
     for col in df.columns:
         if col.strip().lower() in possible:
             return col
     return None
 
+def clean_numeric_value(value):
+    """
+    Clean numeric values by removing invalid characters.
+    
+    Handles:
+    - Percentage signs: "15.5%" → 15.5
+    - Commas in numbers: "1,234.56" → 1234.56
+    - Currency symbols: "$1,234" → 1234
+    - Leading/trailing whitespace
+    
+    Returns:
+    - float if successfully converted
+    - original value if it's not a numeric string
+    - None for empty/null values
+    """
+    # Handle None, NaN, empty strings
+    if pd.isna(value) or value == '' or value is None:
+        return None
+    
+    # If already a number, return it
+    if isinstance(value, (int, float)):
+        return value
+    
+    # Convert to string for processing
+    value_str = str(value).strip()
+    
+    # Empty after stripping
+    if not value_str:
+        return None
+    
+    # Try to detect if this looks like a numeric value
+    # Check for percentage
+    is_percentage = value_str.endswith('%')
+    
+    # Remove common numeric formatting characters
+    cleaned = value_str
+    
+    # Remove percentage sign
+    if is_percentage:
+        cleaned = cleaned.rstrip('%').strip()
+    
+    # Remove currency symbols (common ones)
+    cleaned = re.sub(r'[$€£¥₹]', '', cleaned)
+    
+    # Remove commas (thousand separators)
+    cleaned = cleaned.replace(',', '')
+    
+    # Remove whitespace
+    cleaned = cleaned.strip()
+    
+    # Try to convert to float
+    try:
+        numeric_value = float(cleaned)
+        return numeric_value
+    except (ValueError, TypeError):
+        # If conversion fails, return original value (might be text)
+        return value
+
+def clean_dataframe_values(df, exclude_columns=None):
+    """
+    Clean all numeric-looking values in the dataframe.
+    
+    Args:
+        df: pandas DataFrame
+        exclude_columns: list of column names to skip (e.g., country names)
+    
+    Returns:
+        DataFrame with cleaned values
+    """
+    if exclude_columns is None:
+        exclude_columns = []
+    
+    # Make a copy to avoid modifying the original
+    df_cleaned = df.copy()
+    
+    cleaned_count = 0
+    column_stats = {}
+    
+    for col in df_cleaned.columns:
+        # Skip excluded columns (like country names)
+        if col in exclude_columns:
+            continue
+        
+        # Track changes for this column
+        changes_in_col = 0
+        
+        # Apply cleaning to each value
+        original_values = df_cleaned[col].copy()
+        df_cleaned[col] = df_cleaned[col].apply(clean_numeric_value)
+        
+        # Count how many values changed
+        changed_mask = original_values.astype(str) != df_cleaned[col].astype(str)
+        changes_in_col = changed_mask.sum()
+        
+        if changes_in_col > 0:
+            cleaned_count += changes_in_col
+            column_stats[col] = changes_in_col
+    
+    if cleaned_count > 0:
+        print(f"  ✓ Cleaned {cleaned_count} values across {len(column_stats)} columns")
+        # Show top 5 columns with most changes
+        if column_stats:
+            sorted_stats = sorted(column_stats.items(), key=lambda x: x[1], reverse=True)[:5]
+            for col_name, count in sorted_stats:
+                print(f"    • {col_name}: {count} values")
+    
+    return df_cleaned
+
 def filter_disabled_countries(df):
+    """Filter out disabled countries from the dataframe."""
     country_col = detect_country_column(df)
     if country_col is None:
-        print(" No country column detected.")
+        print("  ⚠ No country column detected.")
         return df
 
     country_series = (
@@ -81,16 +191,14 @@ def filter_disabled_countries(df):
 
 def read_csv_robust(path: Path):
     """
-    Robust reader:
-    - uses Python engine (handles weird quoting better)
-    - skips problematic lines
-    - collects skipped lines for reporting
-    Basically just to see if there are any problems in the input data.
+    Robust CSV reader with error handling.
+    
+    Returns:
+        tuple: (DataFrame, list of bad lines)
     """
     bad_lines = []
 
     def bad_line_handler(bad_line):
-        # bad_line is a list of strings for that row
         bad_lines.append(",".join(bad_line))
         return None  # skip it
 
@@ -107,33 +215,51 @@ def main():
     OUTPUT_DIR = Path("data/filtered_cia_data")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Process all CSV files in the data directory
+    csv_files = list(INPUT_DIR.glob("*.csv"))
+    
+    if not csv_files:
+        print("❌ No CSV files found in data directory")
+        return
 
-    # Many prints here are just for confirmation that the process is working correctly
-    csv_files = [INPUT_DIR / "communications_data.csv"]
+    print(f"🔍 Found {len(csv_files)} CSV file(s) to process\n")
 
     for file in csv_files:
-        if not file.exists():
-            print(f" File not found: {file}")
-            continue
-
+        print(f"📄 Processing: {file.name}")
+        print("=" * 60)
+        
+        # Read CSV
         df, bad_lines = read_csv_robust(file)
-
+        
+        # Report bad lines
         if bad_lines:
             report_path = OUTPUT_DIR / f"{file.stem}_bad_rows.txt"
             report_path.write_text("\n".join(bad_lines), encoding="utf-8")
-            print(f"Skipped {len(bad_lines)} bad rows. Saved to {report_path.name}")
-
-        before = len(df)
-        filtered_df = filter_disabled_countries(df)
+            print(f"  ⚠ Skipped {len(bad_lines)} bad rows → saved to {report_path.name}")
+        
+        # Detect country column
+        country_col = detect_country_column(df)
+        exclude_cols = [country_col] if country_col else []
+        
+        # Clean numeric values (remove %, commas, etc.)
+        print(f"  🧹 Cleaning numeric values...")
+        cleaned_df = clean_dataframe_values(df, exclude_columns=exclude_cols)
+        
+        # Filter disabled countries
+        before = len(cleaned_df)
+        filtered_df = filter_disabled_countries(cleaned_df)
         after = len(filtered_df)
-
+        
+        if before != after:
+            print(f"  🌍 Filtered countries: {before} → {after} (removed {before - after})")
+        
+        # Save output
         out_path = OUTPUT_DIR / file.name
         filtered_df.to_csv(out_path, index=False)
+        print(f"  ✅ Saved: {out_path}")
+        print()
 
-        print(f"{file.name}: {before} → {after} (removed {before - after})")
-        print(f"📁 Saved: {out_path}")
-
-    print("\n Filtering complete.")
+    print("✨ Filtering complete!")
 
 if __name__ == "__main__":
     main()
