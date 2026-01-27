@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Country Comparison | Visualization-PACT</title>
   <link rel="stylesheet" href="styles.css" />
-  
+
   <style>
-    /* Country Selector Styles */
+    /* ==========================================
+       COUNTRY SELECTOR STYLES
+       ========================================== */
     .country-item {
       padding: 6px 10px;
       cursor: pointer;
@@ -32,6 +34,7 @@
       color: #e2e8f0;
       font-size: 13px;
     }
+
     .selected-countries-area {
       background: rgba(15, 23, 42, 0.5);
       border-radius: 8px;
@@ -39,8 +42,10 @@
       margin-bottom: 16px;
       min-height: 60px;
     }
-    
-    /* Search Input */
+
+    /* ==========================================
+       SEARCH INPUT
+       ========================================== */
     #country-search {
       width: 100%;
       padding: 10px 12px;
@@ -59,8 +64,10 @@
     #country-search::placeholder {
       color: #64748b;
     }
-    
-    /* Country List */
+
+    /* ==========================================
+       COUNTRY LIST SCROLLBAR
+       ========================================== */
     #country-list {
       max-height: 250px;
       overflow-y: auto;
@@ -81,8 +88,10 @@
     #country-list::-webkit-scrollbar-thumb:hover {
       background: #64748b;
     }
-    
-    /* Selected Tags */
+
+    /* ==========================================
+       SELECTED TAGS
+       ========================================== */
     .selected-tag {
       display: inline-flex;
       align-items: center;
@@ -111,15 +120,19 @@
     .remove-tag:hover {
       color: #0ea5e9;
     }
-    
-    /* Section Divider */
+
+    /* ==========================================
+       SECTION DIVIDERS
+       ========================================== */
     .section-divider {
       margin-top: 16px;
       padding-top: 16px;
       border-top: 1px solid #334155;
     }
-    
-    /* Compact Attribute Groups */
+
+    /* ==========================================
+       COMPACT ATTRIBUTE GROUPS
+       ========================================== */
     .attributes-scroll.compact {
       max-height: 200px !important;
     }
@@ -136,12 +149,291 @@
     .compact .attribute-label {
       font-size: 12px;
     }
+
+    /* ==========================================
+       LAYOUT - Clean Two-Column Design
+       ========================================== */
+    .map-section-modern {
+      min-height: 100vh;
+      overflow: visible;
+    }
+
+    .explorer-container {
+      display: flex;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    /* Left Panel: Fixed width, scrollable */
+    .attributes-panel {
+      width: 360px;
+      min-width: 360px;
+      max-width: 360px;
+      height: 100vh;
+      overflow-y: auto;
+      background: rgba(15, 23, 42, 0.7);
+      border-right: 2px solid rgba(56, 189, 248, 0.15);
+      padding: 20px;
+    }
+
+    /* Right Panel: Takes remaining space */
+    .results-panel {
+      flex: 1;
+      min-height: 100vh;
+      overflow-y: auto;
+      padding: 20px;
+      background: rgba(23, 33, 47, 0.5);
+    }
+
+    /* ==========================================
+       RESULTS HEADER - ULTRA COMPACT
+       ========================================== */
+    .results-header {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .results-header h2 {
+      color: #e2e8f0;
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .compared-countries-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .compared-country-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #38bdf8;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .country-color-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================
+       VISUALIZATIONS CONTAINER
+       ========================================== */
+    #visualizations-container {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ==========================================
+       CHART CARDS
+       ========================================== */
+    .chart-card {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .chart-wide {
+      max-width: 100%;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .chart-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #e2e8f0;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid rgba(56, 189, 248, 0.2);
+    }
+
+    /* ==========================================
+       CHART WRAPPER - Horizontal Scroll
+       ========================================== */
+    .chart-wrapper {
+      overflow-x: auto;
+      overflow-y: visible;
+      margin: 0 -24px;
+      padding: 0 24px;
+    }
+
+    .chart-wrapper::-webkit-scrollbar {
+      height: 10px;
+    }
+
+    .chart-wrapper::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 5px;
+    }
+
+    .chart-wrapper::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.8);
+      border-radius: 5px;
+    }
+
+    .chart-wrapper::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.9);
+    }
+
+    /* ==========================================
+       SVG CHART SIZING
+       ========================================== */
+    .chart-card svg {
+      display: block;
+      min-width: 600px;
+    }
+
+    /* ==========================================
+       MULTI-LINE TEXT IN CHARTS
+       Critical: Forces attribute labels to wrap
+       ========================================== */
+    
+    /* Attribute labels in grouped bar chart */
+    .chart-card text.attr-label tspan {
+      font-size: 10px !important;
+      fill: #94a3b8;
+    }
+
+    /* Parallel coordinates labels */
+    .chart-card text tspan {
+      font-size: 10px !important;
+    }
+
+    /* All axis text */
+    .chart-card .axis text,
+    .chart-card g.axis text {
+      font-size: 10px !important;
+      fill: #94a3b8;
+    }
+
+    /* Legend text */
+    .chart-card .legend text {
+      font-size: 11px !important;
+      fill: #e2e8f0;
+    }
+
+    /* Value labels */
+    .chart-card text.value {
+      font-size: 11px !important;
+      fill: #e2e8f0;
+      font-weight: 600;
+    }
+
+    /* Country names */
+    .chart-card text.country {
+      font-size: 11px !important;
+      fill: #94a3b8;
+    }
+
+    /* ==========================================
+       LOADING STATE
+       ========================================== */
+    .loading {
+      text-align: center;
+      color: #94a3b8;
+      padding: 60px 20px;
+      font-size: 14px;
+    }
+
+    /* ==========================================
+       TOOLTIP (for interactive charts)
+       ========================================== */
+    #tooltip {
+      position: fixed;
+      display: none;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 8px;
+      padding: 12px 16px;
+      pointer-events: none;
+      z-index: 10000;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      color: #e2e8f0;
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 280px;
+    }
+
+    /* ==========================================
+       RESPONSIVE DESIGN
+       ========================================== */
+    @media (max-width: 1024px) {
+      .explorer-container {
+        flex-direction: column;
+      }
+      .attributes-panel {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 2px solid rgba(56, 189, 248, 0.15);
+      }
+      .results-panel {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .chart-card {
+        padding: 16px;
+      }
+      .chart-card svg {
+        min-width: 400px;
+      }
+    }
   </style>
 </head>
+
 <body class="page-data">
+  <!-- Tooltip element -->
+  <div id="tooltip"></div>
+
   <div class="centered-bg">
     <div class="main-layout">
-      <!-- Sidebar Nav -->
+
+      <!-- ==========================================
+           SIDEBAR NAVIGATION
+           ========================================== -->
       <aside class="sidebar-nav">
         <nav class="nav-list">
           <a class="nav-item" href="index.html" title="Map">
@@ -151,7 +443,7 @@
               </svg>
             </span>
           </a>
-          
+
           <a class="nav-item active" href="data.html" title="Data">
             <span class="nav-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -159,11 +451,24 @@
               </svg>
             </span>
           </a>
-          <a class="nav-item" href="explore.html" title="Explore">
+          <a href="data-diagnostic.html">Diagnostic Tool</a>
+
+          <a class="nav-item" href="indexes.html" title="Indexes">
             <span class="nav-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 6-6"/>
+              </svg>
             </span>
           </a>
+
+          <a class="nav-item" href="explore.html" title="Explore">
+            <span class="nav-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+              </svg>
+            </span>
+          </a>
+
           <a class="nav-item" href="settings.html" title="Settings">
             <span class="nav-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b6c2e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -174,14 +479,18 @@
         </nav>
       </aside>
 
-      <!-- Main Content -->
-      <section class="map-section-modern" style="height:100%;">
+      <!-- ==========================================
+           MAIN CONTENT AREA
+           ========================================== -->
+      <section class="map-section-modern">
         <div class="explorer-container">
-          
-          <!-- Left Panel - Selection -->
+
+          <!-- ==========================================
+               LEFT PANEL: SELECTION
+               ========================================== -->
           <div class="attributes-panel">
             
-            <!-- Country Selection Section -->
+            <!-- Country Selection -->
             <div class="section-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
                 <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>
@@ -195,12 +504,12 @@
             </div>
 
             <div id="country-selector">
-              <div class="loading" style="padding:20px; text-align:center; color:#64748b;">
+              <div class="loading" style="padding:20px; text-align:center; color:#64748b; font-size:13px;">
                 Loading countries...
               </div>
             </div>
 
-            <!-- Attribute Selection Section -->
+            <!-- Attribute Selection -->
             <div class="section-divider">
               <div class="section-title" style="font-size:0.95em; margin-bottom:8px;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
@@ -217,7 +526,7 @@
                   <div class="group-title">Indexes</div>
                   <div id="Indexes-attributes"></div>
                 </div>
-                
+
                 <div class="attribute-group">
                   <div class="group-title">Demographics</div>
                   <div id="demographics-attributes"></div>
@@ -246,41 +555,29 @@
             </button>
           </div>
 
-          <!-- Right Panel - Results -->
+          <!-- ==========================================
+               RIGHT PANEL: RESULTS
+               ========================================== -->
           <div class="results-panel">
             
-            <!-- Country Cards -->
-            <div class="result-card">
-              <div class="section-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
-                  <path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            <!-- Results Header - Shows compared countries -->
+            <div class="results-header" id="results-header" style="display: none;">
+              <h2>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                  <rect x="3" y="12" width="6" height="8"/><rect x="9" y="8" width="6" height="12"/><rect x="15" y="4" width="6" height="16"/>
                 </svg>
-                SELECTED COUNTRIES
-              </div>
-              <div class="country-results" id="country-results">
-                <div class="loading" style="padding:40px 20px; text-align:center; color:#64748b;">
-                  Select countries and attributes, then click "Compare Countries"
-                </div>
+                Comparing:
+              </h2>
+              <div class="compared-countries-list" id="compared-countries-list"></div>
+            </div>
+
+            <!-- Visualizations Container -->
+            <div id="visualizations-container">
+              <div class="loading">
+                Select countries and attributes, then click "Compare Countries" to see visualizations
               </div>
             </div>
 
-            <!-- Comparison Chart -->
-            <div class="result-card">
-              <div class="section-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-                  <polyline points="2 17 12 22 22 17"/>
-                  <polyline points="2 12 12 17 22 12"/>
-                </svg>
-                COMPARISON CHART
-              </div>
-              <div id="radar-container" style="min-height:400px; display:flex; align-items:center; justify-content:center;">
-                <div class="loading" style="text-align:center; color:#64748b;">
-                  Waiting for comparison...
-                </div>
-              </div>
-            </div>
-            
           </div>
 
         </div>
@@ -288,7 +585,9 @@
     </div>
   </div>
 
-  <!-- Libraries -->
+  <!-- ==========================================
+       JAVASCRIPT LIBRARIES
+       ========================================== -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="js/neutralino.js"></script>
   <script src="js/d3.v7.min.js"></script>
