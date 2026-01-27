@@ -77,6 +77,26 @@ const regionColors = {
     'Unknown': '#64748b'
 };
 
+// Visa/Migration Filter Groups
+// EU/EEA/Schengen - Free movement zone for EU citizens
+// English-Speaking - Countries where English is the primary language
+const visaFilters = {
+    'all': null, // No filter - show all countries
+    'eu-eea': new Set([
+        'AUSTRIA', 'BELGIUM', 'BULGARIA', 'CROATIA', 'CZECHIA', 'CZECH REPUBLIC', 'DENMARK', 
+        'ESTONIA', 'FINLAND', 'FRANCE', 'GERMANY', 'GREECE', 'HUNGARY', 'ICELAND', 'IRELAND', 
+        'ITALY', 'LATVIA', 'LIECHTENSTEIN', 'LITHUANIA', 'LUXEMBOURG', 'MALTA', 'NETHERLANDS', 
+        'NORWAY', 'POLAND', 'PORTUGAL', 'ROMANIA', 'SLOVAKIA', 'SLOVENIA', 'SPAIN', 'SWEDEN', 
+        'SWITZERLAND'
+    ]),
+    'english': new Set([
+        'UNITED KINGDOM', 'IRELAND', 'UNITED STATES', 'CANADA', 'AUSTRALIA', 'NEW ZEALAND'
+    ])
+};
+
+// Current active filter
+let activeVisaFilter = 'all';
+
 // Allowed countries list
 const allowedCountries = new Set([
     // Europe
@@ -208,7 +228,31 @@ function initCharts() {
     drawScatterPlot();
 }
 
+// Get filtered data based on active visa filter
+function getFilteredData() {
+    if (activeVisaFilter === 'all' || !visaFilters[activeVisaFilter]) {
+        return allData;
+    }
+    const filterSet = visaFilters[activeVisaFilter];
+    return allData.filter(d => {
+        const name = d.country.toUpperCase();
+        // Check direct match or partial match
+        if (filterSet.has(name)) return true;
+        for (const allowed of filterSet) {
+            if (name.includes(allowed) || allowed.includes(name)) return true;
+        }
+        return false;
+    });
+}
+
 function setupEventListeners() {
+    // Visa filter change
+    document.getElementById('visa-filter').addEventListener('change', (e) => {
+        activeVisaFilter = e.target.value;
+        drawParallelCoordinates();
+        drawScatterPlot();
+    });
+    
     // Scatter plot axis changes
     document.getElementById('scatter-x').addEventListener('change', drawScatterPlot);
     document.getElementById('scatter-y').addEventListener('change', drawScatterPlot);
@@ -319,6 +363,9 @@ function drawParallelCoordinates() {
     
     if (width <= 0 || height <= 0) return;
     
+    // Get filtered data based on visa filter selection
+    const filteredData = getFilteredData();
+    
     const svg = d3.select(container)
         .append('svg')
         .attr('width', width + margin.left + margin.right)
@@ -333,14 +380,14 @@ function drawParallelCoordinates() {
     if (colorBy === 'region') {
         colorScale = d => regionColors[d.region] || '#64748b';
     } else if (colorBy === 'gdp') {
-        const gdpExtent = d3.extent(allData, d => variables.gdp_per_capita.accessor(d));
+        const gdpExtent = d3.extent(filteredData, d => variables.gdp_per_capita.accessor(d));
         const gdpColorScale = d3.scaleSequential(d3.interpolateViridis).domain(gdpExtent);
         colorScale = d => {
             const val = variables.gdp_per_capita.accessor(d);
             return val ? gdpColorScale(val) : '#64748b';
         };
     } else {
-        const popExtent = d3.extent(allData, d => variables.population.accessor(d));
+        const popExtent = d3.extent(filteredData, d => variables.population.accessor(d));
         const popColorScale = d3.scaleSequential(d3.interpolatePlasma).domain(popExtent);
         colorScale = d => {
             const val = variables.population.accessor(d);
@@ -351,7 +398,7 @@ function drawParallelCoordinates() {
     // Create scales for each dimension
     const y = {};
     const dimensions = pcDimensions.filter(dim => {
-        const values = allData.map(d => variables[dim].accessor(d)).filter(v => v !== null);
+        const values = filteredData.map(d => variables[dim].accessor(d)).filter(v => v !== null);
         if (values.length < 5) return false;
         
         y[dim] = d3.scaleLinear()
@@ -378,7 +425,7 @@ function drawParallelCoordinates() {
     
     // Add lines for each country
     svg.selectAll('.pc-line')
-        .data(allData)
+        .data(filteredData)
         .join('path')
         .attr('class', 'pc-line')
         .attr('d', path)
@@ -462,8 +509,9 @@ function drawScatterPlot() {
     const xConfig = variables[xVar];
     const yConfig = variables[yVar];
     
-    // Filter data to those with both values
-    const plotData = allData.filter(d => {
+    // Get filtered data based on visa filter, then filter to those with both values
+    const filteredData = getFilteredData();
+    const plotData = filteredData.filter(d => {
         const xVal = xConfig.accessor(d);
         const yVal = yConfig.accessor(d);
         return xVal !== null && yVal !== null;
