@@ -13,6 +13,35 @@ let selectedAttributes = new Map(); // Map of attribute key -> attribute meta
 
 let DATA_LOADED = false;
 
+// Allowed countries list (Europe, select East Asia, AU/NZ, North America)
+const ALLOWED_COUNTRIES = new Set([
+  // Europe
+  'PORTUGAL', 'SPAIN', 'ANDORRA', 'MONACO', 'FRANCE', 'UNITED KINGDOM', 'IRELAND', 'ITALY',
+  'MALTA', 'LUXEMBOURG', 'BELGIUM', 'NETHERLANDS', 'GERMANY', 'SWITZERLAND', 'AUSTRIA',
+  'SLOVENIA', 'CROATIA', 'BOSNIA AND HERZEGOVINA', 'MONTENEGRO', 'ALBANIA', 'GREECE',
+  'TURKEY (TURKIYE)', 'TURKEY', 'BULGARIA', 'NORTH MACEDONIA', 'KOSOVO', 'SERBIA', 'HUNGARY',
+  'SLOVAKIA', 'CZECHIA', 'CZECH REPUBLIC', 'POLAND', 'UKRAINE', 'ROMANIA', 'MOLDOVA',
+  'REPUBLIC OF MOLDOVA', 'BELARUS', 'RUSSIA', 'RUSSIAN FEDERATION', 'LITHUANIA', 'LATVIA', 
+  'ESTONIA', 'FINLAND', 'SWEDEN', 'NORWAY', 'DENMARK', 'LIECHTENSTEIN', 'ICELAND',
+  // East Asia
+  'JAPAN', 'KOREA, SOUTH', 'SOUTH KOREA', 'TAIWAN', 'CHINA', 'SINGAPORE',
+  // Oceania
+  'AUSTRALIA', 'NEW ZEALAND',
+  // North America
+  'CANADA', 'UNITED STATES', 'UNITED STATES OF AMERICA', 'USA', 'MEXICO', 'GREENLAND'
+]);
+
+function isAllowedCountry(countryName) {
+  if (!countryName) return false;
+  const name = String(countryName).toUpperCase().trim();
+  if (ALLOWED_COUNTRIES.has(name)) return true;
+  // Check partial matches
+  for (const allowed of ALLOWED_COUNTRIES) {
+    if (name.includes(allowed) || allowed.includes(name)) return true;
+  }
+  return false;
+}
+
 const DATA_FILES = [
   "data/filtered_cia_data/demographics_data.csv",
   "data/filtered_cia_data/communications_data.csv",
@@ -79,6 +108,9 @@ async function loadAllDataAndMerge() {
       for (const row of rows) {
         const country = row.Country ?? row.country ?? row.COUNTRY;
         if (!country) continue;
+
+        // Only include allowed countries
+        if (!isAllowedCountry(country)) continue;
 
         const k = normalizeCountryName(country);
         const prev = merged.get(k) || { Country: country };
