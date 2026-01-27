@@ -101,6 +101,11 @@ const visaFilters = {
 // Current active filter
 let activeVisaFilter = 'all';
 
+// Current quantile thresholds for legend filtering
+let currentGdpThresholds = [];
+let currentPopThresholds = [];
+let activeLegendFilter = null; // { type: 'region'|'gdp'|'population', index: number }
+
 // Allowed countries list
 const allowedCountries = new Set([
     // Europe
@@ -415,17 +420,17 @@ function drawParallelCoordinates() {
             .sort((a, b) => a - b);
         
         // Calculate quantile thresholds (20%, 40%, 60%, 80%)
-        const gdpThresholds = [0.2, 0.4, 0.6, 0.8].map(q => 
+        currentGdpThresholds = [0.2, 0.4, 0.6, 0.8].map(q => 
             gdpValues[Math.floor(q * gdpValues.length)]
         );
         
         colorScale = d => {
             const val = variables.gdp_per_capita.accessor(d);
             if (val === null) return '#64748b';
-            if (val < gdpThresholds[0]) return gdpColors[0];
-            if (val < gdpThresholds[1]) return gdpColors[1];
-            if (val < gdpThresholds[2]) return gdpColors[2];
-            if (val < gdpThresholds[3]) return gdpColors[3];
+            if (val < currentGdpThresholds[0]) return gdpColors[0];
+            if (val < currentGdpThresholds[1]) return gdpColors[1];
+            if (val < currentGdpThresholds[2]) return gdpColors[2];
+            if (val < currentGdpThresholds[3]) return gdpColors[3];
             return gdpColors[4];
         };
     } else {
@@ -436,17 +441,17 @@ function drawParallelCoordinates() {
             .sort((a, b) => a - b);
         
         // Calculate quantile thresholds (20%, 40%, 60%, 80%)
-        const popThresholds = [0.2, 0.4, 0.6, 0.8].map(q => 
+        currentPopThresholds = [0.2, 0.4, 0.6, 0.8].map(q => 
             popValues[Math.floor(q * popValues.length)]
         );
         
         colorScale = d => {
             const val = variables.population.accessor(d);
             if (val === null) return '#64748b';
-            if (val < popThresholds[0]) return popColors[0];
-            if (val < popThresholds[1]) return popColors[1];
-            if (val < popThresholds[2]) return popColors[2];
-            if (val < popThresholds[3]) return popColors[3];
+            if (val < currentPopThresholds[0]) return popColors[0];
+            if (val < currentPopThresholds[1]) return popColors[1];
+            if (val < currentPopThresholds[2]) return popColors[2];
+            if (val < currentPopThresholds[3]) return popColors[3];
             return popColors[4];
         };
     }
@@ -533,31 +538,157 @@ function updateLegend(colorBy) {
     const gdpColors = ['#f0f9e8', '#7bccc4', '#43a2ca', '#0868ac', '#084081'];
     const popColors = ['#fef0d9', '#fdcc8a', '#fc8d59', '#d7301f', '#7f0000'];
     
+    // Clear any active legend filter when color scheme changes
+    activeLegendFilter = null;
+    
     if (colorBy === 'region') {
-        Object.entries(regionColors).forEach(([region, color]) => {
+        Object.entries(regionColors).forEach(([region, color], index) => {
             if (region === 'Unknown') return;
             const item = document.createElement('div');
-            item.className = 'legend-item';
+            item.className = 'legend-item interactive';
             item.innerHTML = `<span class="legend-color" style="background:${color}"></span>${region}`;
+            item.addEventListener('click', () => toggleLegendFilter('region', index, region));
+            item.addEventListener('mouseenter', () => previewLegendFilter('region', index, region));
+            item.addEventListener('mouseleave', clearLegendPreview);
             legendContainer.appendChild(item);
         });
     } else if (colorBy === 'gdp') {
         const labels = ['Lowest 20%', 'Low', 'Medium', 'High', 'Highest 20%'];
         gdpColors.forEach((color, i) => {
             const item = document.createElement('div');
-            item.className = 'legend-item';
+            item.className = 'legend-item interactive';
             item.innerHTML = `<span class="legend-color" style="background:${color}"></span>${labels[i]}`;
+            item.addEventListener('click', () => toggleLegendFilter('gdp', i));
+            item.addEventListener('mouseenter', () => previewLegendFilter('gdp', i));
+            item.addEventListener('mouseleave', clearLegendPreview);
             legendContainer.appendChild(item);
         });
     } else {
         const labels = ['Lowest 20%', 'Low', 'Medium', 'High', 'Highest 20%'];
         popColors.forEach((color, i) => {
             const item = document.createElement('div');
-            item.className = 'legend-item';
+            item.className = 'legend-item interactive';
             item.innerHTML = `<span class="legend-color" style="background:${color}"></span>${labels[i]}`;
+            item.addEventListener('click', () => toggleLegendFilter('population', i));
+            item.addEventListener('mouseenter', () => previewLegendFilter('population', i));
+            item.addEventListener('mouseleave', clearLegendPreview);
             legendContainer.appendChild(item);
         });
     }
+}
+
+// Get the bucket index for a data point based on color type
+function getBucketIndex(d, type, region = null) {
+    if (type === 'region') {
+        return d.region === region;
+    } else if (type === 'gdp') {
+        const val = variables.gdp_per_capita.accessor(d);
+        if (val === null) return -1;
+        if (val < currentGdpThresholds[0]) return 0;
+        if (val < currentGdpThresholds[1]) return 1;
+        if (val < currentGdpThresholds[2]) return 2;
+        if (val < currentGdpThresholds[3]) return 3;
+        return 4;
+    } else { // population
+        const val = variables.population.accessor(d);
+        if (val === null) return -1;
+        if (val < currentPopThresholds[0]) return 0;
+        if (val < currentPopThresholds[1]) return 1;
+        if (val < currentPopThresholds[2]) return 2;
+        if (val < currentPopThresholds[3]) return 3;
+        return 4;
+    }
+}
+
+// Preview filter on hover (temporary highlight)
+function previewLegendFilter(type, index, region = null) {
+    // Don't preview if there's an active locked filter
+    if (activeLegendFilter) return;
+    
+    applyLegendHighlight(type, index, region);
+}
+
+// Clear preview on mouse leave
+function clearLegendPreview() {
+    // If there's an active filter, restore it; otherwise clear all
+    if (activeLegendFilter) {
+        applyLegendHighlight(activeLegendFilter.type, activeLegendFilter.index, activeLegendFilter.region);
+    } else {
+        clearLegendHighlight();
+    }
+}
+
+// Toggle filter on click (lock/unlock)
+function toggleLegendFilter(type, index, region = null) {
+    // If clicking the same filter, clear it
+    if (activeLegendFilter && 
+        activeLegendFilter.type === type && 
+        activeLegendFilter.index === index) {
+        activeLegendFilter = null;
+        clearLegendHighlight();
+        updateLegendActiveState(null);
+    } else {
+        // Set new active filter
+        activeLegendFilter = { type, index, region };
+        applyLegendHighlight(type, index, region);
+        updateLegendActiveState(index);
+    }
+}
+
+// Apply highlight to charts based on legend selection
+function applyLegendHighlight(type, index, region = null) {
+    // Highlight matching items in PCP
+    d3.selectAll('.pc-line')
+        .classed('legend-dimmed', d => {
+            if (type === 'region') {
+                return d.region !== region;
+            }
+            return getBucketIndex(d, type) !== index;
+        })
+        .classed('legend-highlighted', d => {
+            if (type === 'region') {
+                return d.region === region;
+            }
+            return getBucketIndex(d, type) === index;
+        });
+    
+    // Highlight matching items in scatter plot
+    d3.selectAll('.scatter-dot')
+        .classed('legend-dimmed', d => {
+            if (type === 'region') {
+                return d.region !== region;
+            }
+            return getBucketIndex(d, type) !== index;
+        })
+        .classed('legend-highlighted', d => {
+            if (type === 'region') {
+                return d.region === region;
+            }
+            return getBucketIndex(d, type) === index;
+        });
+}
+
+// Clear legend highlighting
+function clearLegendHighlight() {
+    d3.selectAll('.pc-line')
+        .classed('legend-dimmed', false)
+        .classed('legend-highlighted', false);
+    
+    d3.selectAll('.scatter-dot')
+        .classed('legend-dimmed', false)
+        .classed('legend-highlighted', false);
+}
+
+// Update visual state of legend items
+function updateLegendActiveState(activeIndex) {
+    const items = document.querySelectorAll('.legend-item');
+    items.forEach((item, i) => {
+        if (activeIndex === null) {
+            item.classList.remove('active');
+        } else {
+            item.classList.toggle('active', i === activeIndex);
+        }
+    });
 }
 
 // ========== SCATTER PLOT ==========

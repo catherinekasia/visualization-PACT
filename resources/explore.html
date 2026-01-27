@@ -162,6 +162,16 @@
       stroke-opacity: 0.1;
     }
     
+    /* Legend-triggered highlighting */
+    .pc-line.legend-highlighted {
+      stroke-opacity: 1;
+      stroke-width: 2.5;
+    }
+    
+    .pc-line.legend-dimmed {
+      stroke-opacity: 0.08;
+    }
+    
     /* Scatter plot specific */
     .scatter-dot {
       fill-opacity: 0.7;
@@ -184,6 +194,16 @@
     
     .scatter-dot.dimmed {
       fill-opacity: 0.15;
+    }
+    
+    /* Legend-triggered highlighting for scatter */
+    .scatter-dot.legend-highlighted {
+      fill-opacity: 1;
+      stroke-width: 2;
+    }
+    
+    .scatter-dot.legend-dimmed {
+      fill-opacity: 0.1;
     }
     
     .axis-label {
@@ -236,6 +256,24 @@
       gap: 6px;
       color: #94a3b8;
       font-size: 0.8rem;
+    }
+    
+    .legend-item.interactive {
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+    }
+    
+    .legend-item.interactive:hover {
+      background: rgba(148, 163, 184, 0.15);
+      color: #e2e8f0;
+    }
+    
+    .legend-item.interactive.active {
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
     }
     
     .legend-color {
