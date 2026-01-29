@@ -1,4 +1,4 @@
-// indexes.js - FIXED to use same paths as working data.js
+// indexes.js 
 
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof Neutralino === "undefined") {
@@ -18,14 +18,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
   Neutralino.events.on("ready", () => {
     const host = document.getElementById("single-map-host");
+    const tooltip = document.getElementById("tooltip");
 
-    // FIXED: Use "data/" paths (NOT "../../data/") to match working data.js
+    if (!host) {
+      console.error("single-map-host not found");
+      return;
+    }
+
     const INDEXES = {
-      gpi:    { title: "Global Peace Index",     path: "data/filtered_cia_data/global_peace_index.csv" },
-      crime:  { title: "Criminal Index",         path: "data/filtered_cia_data/criminal_index.csv" },
-      gti:    { title: "Global Terrorism Index", path: "data/filtered_cia_data/global_terrorism_index.csv" },
-      safety: { title: "Safety Index (Risk)",    path: "data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv" },
-      health: { title: "Own Health Index",       path: "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv" }
+      gpi: {
+        title: "Global Peace Index",
+        path: "data/filtered_cia_data/global_peace_index.csv",
+        ramp: "blues"
+      },
+      crime: {
+        title: "Criminal Index",
+        path: "data/filtered_cia_data/criminal_index.csv",
+        ramp: "purples"
+      },
+      gti: {
+        title: "Global Terrorism Index",
+        path: "data/filtered_cia_data/global_terrorism_index.csv",
+        ramp: "reds"
+      },
+      safety: {
+        title: "Safety Index (Risk)",
+        path: "data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv",
+        ramp: "oranges"
+      },
+      health: {
+        title: "Own Health Index",
+        path: "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv",
+        ramp: "greens"
+      }
     };
 
     function normalizeCountryName(x) {
@@ -78,7 +103,70 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    function renderChoropleth(geojson, countryToValue, title) {
+    function tooltipHTML(countryName, indexTitle, value) {
+      const valueText = (value == null)
+        ? `<span class="tt-val" style="color:#94a3b8;font-weight:600">No data</span>`
+        : `<span class="tt-val">${d3.format(",.2f")(value)}</span>`;
+
+      return `
+        <div class="tt-title">${countryName}</div>
+        <div class="tt-sub">${indexTitle}</div>
+        <div class="tt-row">
+          <span class="tt-key">Value</span>
+          ${valueText}
+        </div>
+      `;
+    }
+
+    function showTooltipAt(event, html) {
+      if (!tooltip) return;
+      tooltip.innerHTML = html;
+
+      const x = event.clientX + 14;
+      const y = event.clientY + 14;
+
+      tooltip.style.left = `${x}px`;
+      tooltip.style.top  = `${y}px`;
+      tooltip.style.display = "block";
+    }
+
+    function moveTooltip(event) {
+      if (!tooltip) return;
+
+      const x = event.clientX + 14;
+      const y = event.clientY + 14;
+
+      tooltip.style.left = `${x}px`;
+      tooltip.style.top  = `${y}px`;
+    }
+
+
+    function hideTooltip() {
+      if (!tooltip) return;
+      tooltip.style.display = "none";
+    }
+
+    function getInterpolator(rampName) {
+      switch ((rampName || "").toLowerCase()) {
+        case "reds": return d3.interpolateReds;
+        case "oranges": return d3.interpolateOranges;
+        case "greens": return d3.interpolateGreens;
+        case "blues": return d3.interpolateBlues;
+        case "purples": return d3.interpolatePurples;
+        default: return d3.interpolateViridis; // very colorblind-safe
+      }
+    }
+
+    function updateLegend(rampName) {
+      const bar = document.getElementById("legend-bar");
+      if (!bar) return;
+
+      const interp = getInterpolator(rampName);
+      const stops = [0, 0.25, 0.5, 0.75, 1].map(t => interp(t));
+      bar.style.background = `linear-gradient(90deg, ${stops.join(", ")})`;
+    }
+
+    function renderChoropleth(geojson, countryToValue, title, currentRamp) {
       host.innerHTML = "";
 
       const W = host.clientWidth || 900;
@@ -95,17 +183,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const values = Array.from(countryToValue.values());
       const minV = d3.min(values);
       const maxV = d3.max(values);
-      const midV = (minV + maxV) / 2;
 
       console.log(`📊 ${title} - min: ${minV?.toFixed(2)}, max: ${maxV?.toFixed(2)}`);
 
-      const color = d3.scaleLinear()
-        .domain([minV, midV, maxV])
-        .range(["#22c55e", "#f59e0b", "#ef4444"])
+      const interp = getInterpolator(currentRamp);
+
+      const color = d3.scaleSequential()
+        .domain([minV, maxV])
+        .interpolator(interp)
         .clamp(true);
 
-      svg.append("g")
-        .selectAll("path")
+      const g = svg.append("g");
+
+      g.selectAll("path")
         .data(geojson.features)
         .join("path")
         .attr("d", path)
@@ -115,7 +205,28 @@ document.addEventListener("DOMContentLoaded", () => {
           return v == null ? "#1f2937" : color(v);
         })
         .attr("stroke", "rgba(148,163,184,0.25)")
-        .attr("stroke-width", 0.7);
+        .attr("stroke-width", 0.7)
+        .style("cursor", "pointer")
+        .on("mouseenter", function (event, d) {
+          const name = featureName(d);
+          const v = countryToValue.get(normalizeCountryName(name));
+
+          d3.select(this)
+            .attr("stroke", "rgba(226,232,240,0.85)")
+            .attr("stroke-width", 1.6);
+
+          showTooltipAt(event, tooltipHTML(name, title, v));
+        })
+        .on("mousemove", function (event) {
+          moveTooltip(event);
+        })
+        .on("mouseleave", function () {
+          d3.select(this)
+            .attr("stroke", "rgba(148,163,184,0.25)")
+            .attr("stroke-width", 0.7);
+
+          hideTooltip();
+        });
 
       svg.append("text")
         .attr("x", 12)
@@ -137,7 +248,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       GEOJSON = Array.isArray(mapData)
         ? { type: "FeatureCollection", features: mapData }
-        : (mapData.type === "FeatureCollection" ? mapData : { type: "FeatureCollection", features: mapData.features || [] });
+        : (mapData.type === "FeatureCollection"
+          ? mapData
+          : { type: "FeatureCollection", features: mapData.features || [] });
 
       console.log("✅ Map geometry loaded:", GEOJSON.features.length, "features");
 
@@ -150,6 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const cfg = INDEXES[key];
           if (!cfg) return;
 
+          updateLegend(cfg.ramp);
           host.innerHTML = `<div class="loading">Loading ${cfg.title}…</div>`;
 
           try {
@@ -157,13 +271,18 @@ document.addEventListener("DOMContentLoaded", () => {
               console.log(`🔄 Loading ${cfg.title}`);
               const rows = await readCSV(cfg.path);
               const valueCol = detectValueColumn(rows);
-              if (!valueCol) throw new Error(`No numeric column found`);
+              if (!valueCol) throw new Error("No numeric column found");
+
               console.log(`✅ Using column: ${valueCol}`);
-              cache.set(key, { title: cfg.title, valueCol, map: buildCountryValueMap(rows, valueCol) });
+              cache.set(key, {
+                title: cfg.title,
+                valueCol,
+                map: buildCountryValueMap(rows, valueCol)
+              });
             }
 
             const item = cache.get(key);
-            renderChoropleth(GEOJSON, item.map, item.title);
+            renderChoropleth(GEOJSON, item.map, item.title, cfg.ramp);
           } catch (e) {
             host.innerHTML = `<div class="loading">❌ Error: ${String(e.message || e)}</div>`;
             console.error(e);
