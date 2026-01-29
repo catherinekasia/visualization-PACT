@@ -100,8 +100,8 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log(`📊 ${title} - min: ${minV?.toFixed(2)}, max: ${maxV?.toFixed(2)}`);
 
       const color = d3.scaleLinear()
-        .domain([minV, midV, maxV])
-        .range(["#22c55e", "#f59e0b", "#ef4444"])
+        .domain([minV,midV,midV,midV, maxV])
+        .range(["#2166ac", "#67a9cf", "#f7f7f7", "#fdae61", "#ff7b00"])
         .clamp(true);
 
       svg.append("g")
