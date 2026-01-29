@@ -1,4 +1,4 @@
-// indexes.js 
+// indexes.js
 
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof Neutralino === "undefined") {
@@ -121,25 +121,16 @@ document.addEventListener("DOMContentLoaded", () => {
     function showTooltipAt(event, html) {
       if (!tooltip) return;
       tooltip.innerHTML = html;
-
-      const x = event.clientX + 14;
-      const y = event.clientY + 14;
-
-      tooltip.style.left = `${x}px`;
-      tooltip.style.top  = `${y}px`;
+      tooltip.style.left = `${event.clientX}px`;
+      tooltip.style.top = `${event.clientY}px`;
       tooltip.style.display = "block";
     }
 
     function moveTooltip(event) {
       if (!tooltip) return;
-
-      const x = event.clientX + 14;
-      const y = event.clientY + 14;
-
-      tooltip.style.left = `${x}px`;
-      tooltip.style.top  = `${y}px`;
+      tooltip.style.left = `${event.clientX}px`;
+      tooltip.style.top = `${event.clientY}px`;
     }
-
 
     function hideTooltip() {
       if (!tooltip) return;
@@ -186,9 +177,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       console.log(`📊 ${title} - min: ${minV?.toFixed(2)}, max: ${maxV?.toFixed(2)}`);
 
-      const color = d3.scaleLinear()
-        .domain([minV, midV, maxV])
-        .range(["#22c55e", "#f59e0b", "#ef4444"])
+      const interp = getInterpolator(currentRamp);
+
+      const color = d3.scaleSequential()
+        .domain([minV, maxV])
+        .interpolator(interp)
         .clamp(true);
 
       const g = svg.append("g");
