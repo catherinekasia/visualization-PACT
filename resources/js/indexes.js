@@ -245,9 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
 
-          hideTooltip();
-        });
-
       svg.append("text")
         .attr("x", 12)
         .attr("y", H - 12)
