@@ -186,11 +186,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       console.log(`📊 ${title} - min: ${minV?.toFixed(2)}, max: ${maxV?.toFixed(2)}`);
 
-      const interp = getInterpolator(currentRamp);
-
-      const color = d3.scaleSequential()
-        .domain([minV, maxV])
-        .interpolator(interp)
+      const color = d3.scaleLinear()
+        .domain([minV, midV, maxV])
+        .range(["#22c55e", "#f59e0b", "#ef4444"])
         .clamp(true);
 
       const g = svg.append("g");
