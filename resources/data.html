@@ -37,10 +37,10 @@
 
     .selected-countries-area {
       background: rgba(15, 23, 42, 0.5);
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 12px;
-      margin-bottom: 16px;
-      min-height: 60px;
+      margin-bottom: 12px;
+      display: block;
     }
 
     /* ==========================================
@@ -103,6 +103,18 @@
       font-size: 12px;
       margin: 2px;
     }
+    #selected-countries:empty::before{
+      content: "No countries selected";
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    #selected-countries{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }
+
     .remove-tag {
       background: none;
       border: none;
@@ -176,6 +188,40 @@
       padding: 20px;
     }
 
+    /* ==========================
+   TOP NAV (Compare / Weights)
+   ========================== */
+    .results-topnav{
+      display:flex;
+      gap:10px;
+      align-items: center;
+      margin-bottom:12px;
+    }
+
+    .mode-btn{
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color:#e2e8f0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor:pointer;
+      font-size: 13px;
+      line-height: 1;
+      height: 36px;
+      display:flex;
+      align-items:center;
+    }
+
+    .mode-btn.active{
+      border-color: rgba(56, 189, 248, 0.65);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.12);
+    }
+
+    .mode-btn:hover{
+      border-color: rgba(56, 189, 248, 0.45);
+    }
+
+
     /* Right Panel: Takes remaining space */
     .results-panel {
       flex: 1;
@@ -186,37 +232,24 @@
     }
 
     /* ==========================================
-       RESULTS HEADER - ULTRA COMPACT
+       RESULTS HEADER - COMPACT
        ========================================== */
     .results-header {
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 8px;
-      padding: 10px 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
       display: flex;
-      align-items: center;
-      gap: 12px;
       flex-wrap: wrap;
+      gap: 6px;
+      flex: 0 0 auto;  
+      align-items: flex-start;
     }
 
-    .results-header h2 {
-      color: #e2e8f0;
-      font-size: 13px;
-      font-weight: 600;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
+    .results-header h2 { margin: 0; }
 
     .compared-countries-list {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      flex: 1;
+      flex: 0 0 auto;
+      align-items: center;
     }
 
     .compared-country-tag {
@@ -228,7 +261,7 @@
       color: #38bdf8;
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 500;
     }
 
@@ -251,6 +284,12 @@
       margin: 0 auto;
     }
 
+
+    #visualizations-container .loading {
+      padding: 10px 0;
+    }
+
+
     /* ==========================================
        CHART CARDS
        ========================================== */
@@ -260,6 +299,7 @@
       border-radius: 12px;
       padding: 24px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      margin-top: 0;
     }
 
     .chart-wide {
@@ -371,7 +411,6 @@
     .loading {
       text-align: center;
       color: #94a3b8;
-      padding: 60px 20px;
       font-size: 14px;
     }
 
@@ -420,7 +459,26 @@
       .chart-card svg {
         min-width: 400px;
       }
+
+    .results-panel{
+      display: block !important;
     }
+
+    #visualizations-container{
+      display: block !important;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+      min-height: 0 !important;
+    }
+
+    #visualizations-container > *:first-child{
+      margin-top: 0 !important;
+    }
+
+    .chart-card{
+      margin-top: 0 !important;
+    }
+
   </style>
 </head>
 
@@ -559,12 +617,16 @@
                RIGHT PANEL: RESULTS
                ========================================== -->
           <div class="results-panel">
+            <div class="results-topnav" id="results-topnav">
+              <button class="mode-btn active" id="mode-compare-btn">Compare countries</button>
+              <button class="mode-btn" id="mode-weights-btn">Choose importance of attributes</button>
+            </div>
             
             <!-- Results Header - Shows compared countries -->
             <div class="results-header" id="results-header" style="display: none;">
               <h2>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
-                  <rect x="3" y="12" width="6" height="8"/><rect x="9" y="8" width="6" height="12"/><rect x="15" y="4" width="6" height="16"/>
+                  <rect x="3" y="12" width="6" height="3"/><rect x="9" y="8" width="6" height="12"/><rect x="15" y="4" width="6" height="16"/>
                 </svg>
                 Comparing:
               </h2>
