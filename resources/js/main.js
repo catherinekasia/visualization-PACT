@@ -59,6 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Only initialize map-related features on the homepage
         const isHome = /index\.html?$/.test(window.location.pathname) || window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
         if (isHome) {
+            // Show loading indicator
+            const loadingEl = document.getElementById('map-loading');
+            if (loadingEl) loadingEl.style.display = 'block';
+            
             appState.map = initMap(canvas, [], onCountrySelected);
             // Default to Europe view
             // centerLon, centerLat, scale
@@ -77,9 +81,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Load map data first (needed for rendering). Attributes are heavier; load them lazily.
             loadMapData((err, mapData) => {
-                if (err) return;
+                if (err) {
+                    // Hide loading on error
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    return;
+                }
                 appState.countries = mapData;
                 appState.map.updateCountries(mapData);
+                
+                // Hide loading indicator once map is ready
+                if (loadingEl) {
+                    setTimeout(() => {
+                        loadingEl.style.opacity = '0';
+                        loadingEl.style.transition = 'opacity 0.3s ease';
+                        setTimeout(() => loadingEl.style.display = 'none', 300);
+                    }, 100);
+                }
 
                 // Defer attribute loading to idle time so initial UI stays snappy.
                 const loadAttributes = () => {

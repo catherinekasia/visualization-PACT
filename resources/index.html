@@ -70,6 +70,11 @@
       <section class="map-section-modern">
         <div class="map-canvas-container-modern">
           <canvas id="map-canvas"></canvas>
+          <!-- Loading Indicator -->
+          <div id="map-loading" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#38bdf8;display:none;z-index:5;">
+            <div style="width:48px;height:48px;border:4px solid rgba(56,189,248,0.2);border-top-color:#38bdf8;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px;"></div>
+            <div style="font-size:16px;font-weight:600;">Loading Map...</div>
+          </div>
           <div id="map-controls" style="position:absolute;top:12px;right:16px;z-index:10;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:auto;background:rgba(11,17,25,0.45);padding:8px;border-radius:8px;">
             <button class="map-btn" id="btn-europe" style="background:#232b3e;color:#b6c2e2;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px;box-shadow:0 2px 8px #0003;">Europe</button>
             <button class="map-btn" id="btn-america" style="background:#232b3e;color:#b6c2e2;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px;box-shadow:0 2px 8px #0003;">America</button>
@@ -195,6 +200,12 @@
         color: #38bdf8;
         text-align: center;
         pointer-events: none;
+      }
+      
+      /* Loading Spinner Animation */
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
 
       /* Popup Modal Styles */
