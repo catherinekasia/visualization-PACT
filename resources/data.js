@@ -128,23 +128,42 @@ async function loadAllDataAndMerge() {
         // Map CSV column names with multiple normalization strategies
         const mappedRow = {};
         for (const [csvKey, value] of Object.entries(row)) {
-          // Keep original key
-          mappedRow[csvKey] = value;
+          // Normalize and coerce numeric-like strings (percent, comma thousands)
+          const coerceValue = (v) => {
+            if (v === null || v === undefined) return v;
+            if (typeof v === 'number') return v;
+            if (typeof v !== 'string') return v;
+            const s = v.trim();
+            if (s === '') return null;
+            // Percentage values like "37.3%"
+            if (/^-?\d+(?:\.\d+)?%$/.test(s)) {
+              return parseFloat(s.replace('%', ''));
+            }
+            // Numeric with commas or spaces: "1,234" or "1 234"
+            const num = Number(s.replace(/,/g, '').replace(/\s+/g, ''));
+            if (!Number.isNaN(num)) return num;
+            return s;
+          };
+
+          const coerced = coerceValue(value);
+
+          // Keep original key (use coerced value where appropriate)
+          mappedRow[csvKey] = coerced;
           
           // Try multiple normalizations
           const normalized1 = csvKey.trim().replace(/\s+/g, '_'); // spaces to underscores
           const normalized2 = csvKey.trim().replace(/\s+/g, '_').replace(/-/g, '_'); // also hyphens
           const normalized3 = csvKey.trim().replace(/[^\w]/g, '_'); // all non-word chars
           const normalized4 = csvKey.trim().replace(/\s+/g, ''); // remove all spaces
-          
-          mappedRow[normalized1] = value;
-          mappedRow[normalized2] = value;
-          mappedRow[normalized3] = value;
-          mappedRow[normalized4] = value;
+
+          mappedRow[normalized1] = coerced;
+          mappedRow[normalized2] = coerced;
+          mappedRow[normalized3] = coerced;
+          mappedRow[normalized4] = coerced;
           
           // Also try lowercase versions
-          mappedRow[csvKey.toLowerCase().trim()] = value;
-          mappedRow[normalized1.toLowerCase()] = value;
+          mappedRow[csvKey.toLowerCase().trim()] = coerced;
+          mappedRow[normalized1.toLowerCase()] = coerced;
         }
         
         const k = normalizeCountryName(country);
@@ -963,8 +982,8 @@ function createRadarChart(container, countries, dims, extents) {
 
   const angleSlice = (Math.PI * 2) / dims.length;
 
-  // Add pattern definitions for colorblind accessibility
-  const PATTERNS = ['none', 'diagonal', 'dots', 'cross', 'horizontal'];
+  // Disable pattern overlays for radar chart (keep clean filled polygons)
+  const PATTERNS = ['none'];
   const defs = svg.append('defs');
   
   const timestamp = Date.now();

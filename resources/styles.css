@@ -850,7 +850,7 @@ body.page-data .attributes-scroll {
 }
 
 /* Right panel */
-body.page-data .results-panel {
+body.page-data {
   flex: 1;
   display: grid;
   grid-template-rows: 340px 1fr;

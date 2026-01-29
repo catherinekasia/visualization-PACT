@@ -104,6 +104,21 @@ document.addEventListener("DOMContentLoaded", () => {
         .range(["#2166ac", "#67a9cf", "#f7f7f7", "#fdae61", "#ff7b00"])
         .clamp(true);
 
+      // Create tooltip
+      const tooltip = d3.select("body")
+        .append("div")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background", "rgba(15, 23, 42, 0.95)")
+        .style("color", "#e2e8f0")
+        .style("border", "1px solid rgba(56, 189, 248, 0.4)")
+        .style("border-radius", "6px")
+        .style("padding", "8px 12px")
+        .style("font-size", "13px")
+        .style("pointer-events", "none")
+        .style("z-index", "10000")
+        .style("box-shadow", "0 4px 12px rgba(0, 0, 0, 0.5)");
+
       svg.append("g")
         .selectAll("path")
         .data(geojson.features)
@@ -115,7 +130,40 @@ document.addEventListener("DOMContentLoaded", () => {
           return v == null ? "#1f2937" : color(v);
         })
         .attr("stroke", "rgba(148,163,184,0.25)")
-        .attr("stroke-width", 0.7);
+        .attr("stroke-width", 0.7)
+        .on("mouseover", function(event, d) {
+          const name = featureName(d);
+          const v = countryToValue.get(normalizeCountryName(name));
+          // Only show tooltip for countries with data
+          if (v != null) {
+            tooltip.html(`<strong>${name}</strong><br/>${title}: ${v.toFixed(2)}`);
+            tooltip.style("visibility", "visible");
+            d3.select(this)
+              .attr("stroke", "#38bdf8")
+              .attr("stroke-width", 2);
+          }
+        })
+        .on("mousemove", function(event, d) {
+          const name = featureName(d);
+          const v = countryToValue.get(normalizeCountryName(name));
+          // Only move tooltip if country has data
+          if (v != null) {
+            tooltip
+              .style("top", (event.pageY - 10) + "px")
+              .style("left", (event.pageX + 10) + "px");
+          }
+        })
+        .on("mouseout", function(event, d) {
+          const name = featureName(d);
+          const v = countryToValue.get(normalizeCountryName(name));
+          // Only hide tooltip and reset stroke if country has data
+          if (v != null) {
+            tooltip.style("visibility", "hidden");
+            d3.select(this)
+              .attr("stroke", "rgba(148,163,184,0.25)")
+              .attr("stroke-width", 0.7);
+          }
+        });
 
       svg.append("text")
         .attr("x", 12)
