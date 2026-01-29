@@ -11,6 +11,8 @@ let SAMPLE_DATA = [];
 let selectedCountries = new Map();
 let selectedAttributes = new Map();
 let DATA_LOADED = false;
+let CURRENT_MODE = "compare";     // "compare" | "weights"
+let LAST_EXTENTS_ALL = null;
 
 // Allowed countries list (Europe, select East Asia, AU/NZ, North America)
 const ALLOWED_COUNTRIES = new Set([
@@ -46,11 +48,12 @@ const DATA_FILES = [
 
 // Colorblind-friendly palette
 const COLORBLIND_PALETTE = [
-  '#4285F4', // Blue
-  '#EA4335', // Red  
-  '#FBBC04', // Yellow
-  '#34A853', // Green
-  '#9333EA', // Purple
+  '#F8767A', // warm pink-red
+  '#E38F00', // orange
+  '#83B83F', // green
+  '#00C3BB', // teal
+  '#49A9FF', // blue
+  '#C385EF', // purple
 ];
 
 // ============================================================================
@@ -85,6 +88,105 @@ function normalizeCountryName(name) {
   if (aliases[norm]) return aliases[norm];
   return norm;
 }
+
+// ============================================================================
+// WEIGHTS MODE HELPERS (NEW)
+// ============================================================================
+
+function getAllAttributeDimsFlat() {
+  const dims = [];
+  for (const category of Object.values(ATTRIBUTES || {})) {
+    for (const [key, meta] of Object.entries(category)) {
+      dims.push({
+        key,
+        label: meta.label,
+        better: meta.better || "max",
+        optimal: meta.optimal
+      });
+    }
+  }
+  return dims;
+}
+
+function computeAllExtents(dims) {
+  const extents = {};
+  for (const d of dims) {
+    const vals = SAMPLE_DATA
+      .map(row => row[d.key])
+      .filter(v => typeof v === "number" && !Number.isNaN(v));
+
+    if (!vals.length) {
+      extents[d.key] = null;
+      continue;
+    }
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    extents[d.key] = { min, max: max === min ? min + 1 : max };
+  }
+  return extents;
+}
+
+function normalize01(raw, dim, extent) {
+  if (!extent) return null;
+  if (typeof raw !== "number" || Number.isNaN(raw)) return null;
+
+  let t = (raw - extent.min) / (extent.max - extent.min);
+  if (dim.better === "min") t = 1 - t;
+
+  // clamp
+  return Math.max(0, Math.min(1, t));
+}
+
+function getWeightsFromUI(dims, defaultW = 50) {
+  const w = new Map();
+  // sliders that exist in DOM
+  document.querySelectorAll('#weights-list input[type="range"]').forEach(r => {
+    w.set(r.dataset.key, parseFloat(r.value));
+  });
+  // attributes not currently rendered (e.g., filtered out by search) keep default
+  dims.forEach(d => {
+    if (!w.has(d.key)) w.set(d.key, defaultW);
+  });
+  return w;
+}
+
+function weightedScoreForCountry(countryRow, dims, extents, weightsMap) {
+  let sumW = 0;
+  let sum = 0;
+
+  for (const dim of dims) {
+    const extent = extents[dim.key];
+    const t = normalize01(countryRow[dim.key], dim, extent);
+    if (t === null) continue;
+
+    const w = weightsMap.get(dim.key) ?? 50;
+    sum += w * t;
+    sumW += w;
+  }
+  if (sumW === 0) return null;
+  return sum / sumW; // 0..1
+}
+
+function weightedAverageProfile(dims, extents, weightsMap) {
+  // weighted average over ALL allowed countries, attribute by attribute (normalized 0..1)
+  const profile = {};
+  for (const dim of dims) {
+    const extent = extents[dim.key];
+    if (!extent) { profile[dim.key] = null; continue; }
+
+    const vals = SAMPLE_DATA
+      .map(row => normalize01(row[dim.key], dim, extent))
+      .filter(v => v !== null);
+
+    if (!vals.length) { profile[dim.key] = null; continue; }
+
+    // average normalized value (0..1)
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    profile[dim.key] = avg;
+  }
+  return profile;
+}
+
 
 // ============================================================================
 // DATA LOADING
@@ -174,6 +276,7 @@ async function loadAllDataAndMerge() {
 
     SAMPLE_DATA = Array.from(merged.values());
     DATA_LOADED = true;
+    LAST_EXTENTS_ALL = null;
     console.log("✅ Merged countries:", SAMPLE_DATA.length);
     
     if (SAMPLE_DATA.length > 0) {
@@ -220,7 +323,7 @@ function initializeCountrySelector() {
     (a.Country || '').localeCompare(b.Country || '')
   );
 
-  console.log(`✅ Showing ${sortedCountries.length} allowed countries`);
+  console.log(`Showing ${sortedCountries.length} allowed countries`);
 
   container.innerHTML = `
     <input type="text" 
@@ -412,17 +515,385 @@ function updateCompareButton() {
 }
 
 // ============================================================================
+// MODE SWITCH (NEW): Compare vs Weights
+// ============================================================================
+
+function setMode(mode) {
+  CURRENT_MODE = mode;
+
+  const compareBtn = document.getElementById("mode-compare-btn");
+  const weightsBtn = document.getElementById("mode-weights-btn");
+
+  if (compareBtn && weightsBtn) {
+    compareBtn.classList.toggle("active", mode === "compare");
+    weightsBtn.classList.toggle("active", mode === "weights");
+  }
+
+  const resultsHeader = document.getElementById("results-header");
+  const viz = document.getElementById("visualizations-container");
+  if (!viz) return;
+
+  // Compare mode: normal UI behavior
+  if (mode === "compare") {
+  document.getElementById("weights-card")?.remove();
+  document.getElementById("weights-results")?.remove();
+
+  const viz = document.getElementById("visualizations-container");
+  if (viz && viz.children.length === 0) {
+    viz.innerHTML = `<div class="loading">
+      Select countries and attributes, then click "Compare Countries" to see visualizations
+    </div>`;
+  }
+
+  const resultsHeader = document.getElementById("results-header");
+  if (resultsHeader) resultsHeader.style.display = selectedCountries.size ? "block" : "none";
+
+  return;
+}
+
+
+  // Weights mode: hide compared header (not used here)
+  if (resultsHeader) resultsHeader.style.display = "none";
+  renderWeightsPage();
+}
+
+function renderWeightsPage() {
+  const viz = document.getElementById("visualizations-container");
+  if (!viz) return;
+
+  if (!DATA_LOADED) {
+    viz.innerHTML = `<div class="loading">Loading data…</div>`;
+    return;
+  }
+
+  const dims = getAllAttributeDimsFlat();
+
+  if (!LAST_EXTENTS_ALL) {
+    LAST_EXTENTS_ALL = computeAllExtents(dims);
+  }
+
+  viz.innerHTML = `
+    <div class="chart-card" id="weights-card">
+      <div class="chart-title">Choose importance of attributes (weights)</div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+        <label style="color:#94a3b8; font-size:13px;">Top:</label>
+        <select id="topk-select" style="background:#1e293b; color:#e2e8f0; border:1px solid #475569; border-radius:8px; padding:6px 10px;">
+          <option value="3">3 countries</option>
+          <option value="5" selected>5 countries</option>
+        </select>
+
+        <input id="attr-weight-search" placeholder="Search attributes…" 
+          style="flex:1; min-width:220px; background:#1e293b; color:#e2e8f0; border:1px solid #475569; border-radius:8px; padding:8px 10px;"/>
+
+        <button id="run-recommend"
+          style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.35); color:#e2e8f0; padding:8px 12px; border-radius:8px; cursor:pointer;">
+          Recommend best countries
+        </button>
+      </div>
+
+      <div id="weights-list" style="max-height:360px; overflow:auto; border:1px solid rgba(148,163,184,0.18); border-radius:10px; padding:10px;"></div>
+      <div style="color:#94a3b8; font-size:12px; margin-top:10px;">
+        Tip: move a few sliders strongly. Everything else stays “medium” automatically.
+      </div>
+    </div>
+
+    <div id="weights-results"></div>
+  `;
+
+  const weightsList = document.getElementById("weights-list");
+  const search = document.getElementById("attr-weight-search");
+
+  const defaultW = 50;
+
+  function renderList(filterText = "") {
+    const q = filterText.trim().toLowerCase();
+    const showDims = q ? dims.filter(d => d.label.toLowerCase().includes(q)) : dims;
+
+    weightsList.innerHTML = showDims.map(d => `
+      <div style="display:flex; gap:10px; align-items:center; padding:8px 6px; border-bottom:1px solid rgba(148,163,184,0.08);">
+        <div style="flex:1; color:#e2e8f0; font-size:13px;">${d.label}</div>
+        <input type="range" min="0" max="100" value="${defaultW}" data-key="${d.key}" style="width:240px;">
+        <div style="width:40px; text-align:right; color:#94a3b8; font-size:12px;" id="wval-${d.key}">${defaultW}</div>
+      </div>
+    `).join("");
+
+    // live display
+    weightsList.querySelectorAll('input[type="range"]').forEach(r => {
+      r.addEventListener("input", () => {
+        const key = r.dataset.key;
+        const el = document.getElementById(`wval-${key}`);
+        if (el) el.textContent = r.value;
+      });
+    });
+  }
+
+  renderList("");
+
+  if (search) {
+    search.addEventListener("input", e => renderList(e.target.value));
+  }
+
+  const runBtn = document.getElementById("run-recommend");
+  if (runBtn) runBtn.addEventListener("click", () => runRecommendation(dims));
+}
+
+function runRecommendation(dims) {
+  const topk = parseInt(document.getElementById("topk-select")?.value || "5", 10);
+
+  // weights: sliders + default for missing
+  const weights = getWeightsFromUI(dims, 50);
+
+  // Compute score for every allowed country in SAMPLE_DATA
+  const scored = SAMPLE_DATA.map(row => {
+    const score = weightedScoreForCountry(row, dims, LAST_EXTENTS_ALL, weights);
+    return score === null ? null : { Country: row.Country, row, score };
+  }).filter(Boolean);
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const top = scored.slice(0, topk);
+  const results = document.getElementById("weights-results");
+  if (!results) return;
+
+  if (!top.length) {
+    results.innerHTML = `<div class="chart-card"><div style="color:#ef4444;">No countries had enough data for the selected attributes.</div></div>`;
+    return;
+  }
+
+  // Build a small "selected" set for visualization (top countries)
+  const topCountries = top.map(t => t.row);
+
+  // Weighted-average profile for justification
+  const avgProfile = weightedAverageProfile(dims, LAST_EXTENTS_ALL, weights);
+
+  results.innerHTML = `
+    <div class="chart-card">
+      <div class="chart-title">Top ${top.length} countries for your weights</div>
+      <div id="topk-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      <div class="chart-wrapper"><svg id="weights-bar-${Date.now()}"></svg></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Justification (Radar): Weighted-average profile vs best countries</div>
+      <div class="chart-wrapper"><svg id="weights-radar-${Date.now()}"></svg></div>
+    </div>
+  `;
+
+  // render tags
+  const list = document.getElementById("topk-list");
+  if (list) {
+    list.innerHTML = top.map((t, i) => `
+      <div class="compared-country-tag">
+        <div class="country-color-dot" style="background-color:${COLORBLIND_PALETTE[i % COLORBLIND_PALETTE.length]};"></div>
+        ${t.Country} (${(t.score*100).toFixed(1)})
+      </div>
+    `).join("");
+  }
+
+  // Draw bar chart for top scores
+  drawTopKBarChart(top, results.querySelector("svg[id^='weights-bar-']"));
+
+  // Draw radar for (avg profile + best 2/3)
+  const radarSvg = results.querySelector("svg[id^='weights-radar-']");
+  drawWeightsRadar(avgProfile, topCountries.slice(0, Math.min(3, topCountries.length)), dims, radarSvg);
+}
+
+function drawTopKBarChart(top, svgNode) {
+  if (!svgNode) return;
+
+  const W = 900, H = 420;
+  const pad = { top: 30, right: 40, bottom: 80, left: 200 };
+
+  const svg = d3.select(svgNode).attr("width", W).attr("height", H);
+
+  const data = top.map((t, i) => ({
+    country: t.Country,
+    value: t.score * 100,
+    color: COLORBLIND_PALETTE[i % COLORBLIND_PALETTE.length]
+  }));
+
+  const maxV = Math.max(...data.map(d => d.value));
+
+  const x = d3.scaleLinear().domain([0, maxV * 1.05]).range([pad.left, W - pad.right]);
+  const y = d3.scaleBand().domain(data.map(d => d.country)).range([pad.top, H - pad.bottom]).padding(0.2);
+
+  svg.selectAll("rect")
+    .data(data)
+    .join("rect")
+    .attr("x", pad.left)
+    .attr("y", d => y(d.country))
+    .attr("height", y.bandwidth())
+    .attr("width", d => x(d.value) - pad.left)
+    .attr("fill", d => d.color)
+    .attr("rx", 4);
+
+  svg.selectAll("text.label")
+    .data(data)
+    .join("text")
+    .attr("class", "label")
+    .attr("x", d => x(d.value) + 8)
+    .attr("y", d => y(d.country) + y.bandwidth()/2)
+    .attr("dy", "0.35em")
+    .attr("fill", "#e2e8f0")
+    .attr("font-size", "12px")
+    .text(d => d.value.toFixed(1));
+
+  svg.selectAll("text.country")
+    .data(data)
+    .join("text")
+    .attr("class", "country")
+    .attr("x", pad.left - 10)
+    .attr("y", d => y(d.country) + y.bandwidth()/2)
+    .attr("dy", "0.35em")
+    .attr("text-anchor", "end")
+    .attr("fill", "#94a3b8")
+    .attr("font-size", "12px")
+    .text(d => d.country);
+
+  svg.append("g")
+    .attr("transform", `translate(0,${H - pad.bottom})`)
+    .call(d3.axisBottom(x).ticks(5))
+    .attr("color", "#64748b");
+
+  svg.append("text")
+    .attr("x", (pad.left + W - pad.right)/2)
+    .attr("y", H - 35)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#94a3b8")
+    .attr("font-size", "12px")
+    .text("Weighted score (0–100)");
+}
+
+function drawWeightsRadar(avgProfile, topCountries, dims, svgNode) {
+  if (!svgNode) return;
+
+  // Pick a reasonable number of dims to show (radar becomes unreadable if huge)
+  // Use first 10 dims by default; you can improve later with “selected dims” logic.
+  const showDims = dims.slice(0, 10);
+  const W = 700, H = 600;
+  const cx = W/2, cy = H/2;
+  const radius = Math.min(W, H)/2 - 120;
+  const angleSlice = (Math.PI*2)/showDims.length;
+
+  const svg = d3.select(svgNode).attr("width", W).attr("height", H);
+
+  // rings
+  [0.25,0.5,0.75,1].forEach(level=>{
+    svg.append("circle")
+      .attr("cx", cx).attr("cy", cy)
+      .attr("r", radius*level)
+      .attr("fill","none")
+      .attr("stroke","#334155")
+      .attr("opacity",0.4);
+  });
+
+  // axes + labels
+  showDims.forEach((dim, i)=>{
+    const a = angleSlice*i - Math.PI/2;
+    const x = cx + Math.cos(a)*radius;
+    const y = cy + Math.sin(a)*radius;
+
+    svg.append("line")
+      .attr("x1",cx).attr("y1",cy)
+      .attr("x2",x).attr("y2",y)
+      .attr("stroke","#475569").attr("stroke-width",1);
+
+    const lx = cx + Math.cos(a)*(radius+40);
+    const ly = cy + Math.sin(a)*(radius+40);
+
+    svg.append("text")
+      .attr("x",lx).attr("y",ly)
+      .attr("text-anchor","middle")
+      .attr("fill","#94a3b8")
+      .attr("font-size","10px")
+      .text(dim.label);
+  });
+
+  function pathFor(values01){
+    const pts = showDims.map((dim,i)=>{
+      const a = angleSlice*i - Math.PI/2;
+      const v = values01(dim) ?? 0;
+      const r = radius*v;
+      return { x: cx + Math.cos(a)*r, y: cy + Math.sin(a)*r };
+    });
+
+    const d = pts.map((p,i)=> (i===0?`M ${p.x},${p.y}`:`L ${p.x},${p.y}`)).join(" ") + " Z";
+    return { d, pts };
+  }
+
+  // Build series: avg + topCountries
+  const series = [];
+
+  series.push({
+    name: "Weighted average",
+    color: "#e2e8f0",
+    getVal: (dim)=> avgProfile[dim.key]
+  });
+
+  topCountries.forEach((c,i)=>{
+    series.push({
+      name: c.Country,
+      color: COLORBLIND_PALETTE[i % COLORBLIND_PALETTE.length],
+      getVal: (dim)=> normalize01(c[dim.key], dim, LAST_EXTENTS_ALL[dim.key])
+    });
+  });
+
+  series.forEach((s,si)=>{
+    const { d, pts } = pathFor(s.getVal);
+
+    svg.append("path")
+      .attr("d", d)
+      .attr("fill", s.color)
+      .attr("fill-opacity", si===0 ? 0.04 : 0.08)
+      .attr("stroke", s.color)
+      .attr("stroke-width", si===0 ? 2 : 2.5)
+      .attr("stroke-opacity", 0.9);
+
+    pts.forEach(p=>{
+      svg.append("circle")
+        .attr("cx",p.x).attr("cy",p.y)
+        .attr("r", si===0 ? 3 : 4)
+        .attr("fill", s.color)
+        .attr("stroke","#0b1220")
+        .attr("stroke-width",2);
+    });
+  });
+
+  // legend
+  const legend = svg.append("g").attr("transform", `translate(${W-200}, 20)`);
+  series.forEach((s,i)=>{
+    const g = legend.append("g").attr("transform", `translate(0, ${i*22})`);
+    g.append("rect").attr("width",14).attr("height",14).attr("fill", s.color).attr("rx",3);
+    g.append("text")
+      .attr("x",20).attr("y",7).attr("dy","0.35em")
+      .attr("fill","#e2e8f0").attr("font-size","12px")
+      .text(s.name);
+  });
+}
+
+// ============================================================================
 // VISUALIZATION - Multiple Chart Types
 // ============================================================================
 
 function compareCountries() {
+  const weightsList = document.getElementById("weights-list");
+  const weightsResults = document.getElementById("weights-results");
+  if (weightsList) weightsList.closest(".chart-card")?.remove();
+  if (weightsResults) weightsResults.remove();
+
+  if (typeof setMode === "function") setMode("compare");
+
   if (selectedCountries.size === 0 || selectedAttributes.size === 0) {
     alert("Please select both countries and attributes");
     return;
   }
 
-  console.log("🔍 Comparing:", Array.from(selectedCountries.keys()));
-  console.log("📊 Attributes:", Array.from(selectedAttributes.keys()));
+  console.log("Comparing:", Array.from(selectedCountries.keys()));
+  console.log("Attributes:", Array.from(selectedAttributes.keys()));
+
+  const viz = document.getElementById("visualizations-container");
+  viz.innerHTML = ""; 
 
   createVisualizations();
 }
@@ -451,12 +922,12 @@ function createVisualizations() {
   }));
 
   console.log('='.repeat(80));
-  console.log('🔍 VISUALIZATION DEBUG INFO');
+  console.log('VISUALIZATION DEBUG INFO');
   console.log('='.repeat(80));
-  console.log(`📊 Selected ${dims.length} attributes:`, dims.map(d => d.label));
-  console.log(`🌍 Selected ${countries.length} countries:`, countries.map(c => c.Country));
+  console.log(`Selected ${dims.length} attributes:`, dims.map(d => d.label));
+  console.log(`Selected ${countries.length} countries:`, countries.map(c => c.Country));
   console.log('');
-  console.log('🔑 Looking for these keys in country data:');
+  console.log('Looking for these keys in country data:');
   dims.forEach(d => {
     console.log(`   - ${d.key} (${d.label})`);
   });
@@ -607,14 +1078,14 @@ function createGroupedBarChart(container, countries, dims, extents) {
   dims.forEach(dim => {
     const extent = extents[dim.key];
     if (!extent) {
-      console.warn(`⚠️ No extent for ${dim.label} (${dim.key}) - skipping this attribute`);
+      console.warn(`No extent for ${dim.label} (${dim.key}) - skipping this attribute`);
       return;
     }
 
     countries.forEach((c, i) => {
       const raw = c[dim.key];
       if (typeof raw !== 'number' || Number.isNaN(raw)) {
-        console.warn(`⚠️ Missing data for ${c.Country} - ${dim.label}: ${raw}`);
+        console.warn(`Missing data for ${c.Country} - ${dim.label}: ${raw}`);
         return; // Skip this country for this attribute
       }
 
@@ -633,20 +1104,20 @@ function createGroupedBarChart(container, countries, dims, extents) {
   });
 
   if (normalizedData.length === 0) {
-    console.error('❌ No valid data to display in grouped bar chart');
+    console.error('No valid data to display in grouped bar chart');
     chartDiv.innerHTML += '<div style="padding:40px; text-align:center; color:#ef4444;">No valid data available for selected attributes</div>';
     return;
   }
 
-  console.log(`✅ Grouped bar chart: ${normalizedData.length} data points for ${dims.length} attributes`);
+  console.log(`Grouped bar chart: ${normalizedData.length} data points for ${dims.length} attributes`);
   
   // Log which attributes are actually showing
   const attributesWithData = [...new Set(normalizedData.map(d => d.attribute))];
-  console.log(`📊 Attributes with data (${attributesWithData.length}):`, attributesWithData);
+  console.log(`Attributes with data (${attributesWithData.length}):`, attributesWithData);
   
   const missingAttributes = dims.map(d => d.label).filter(label => !attributesWithData.includes(label));
   if (missingAttributes.length > 0) {
-    console.warn(`⚠️ Attributes with NO data (${missingAttributes.length}):`, missingAttributes);
+    console.warn(`Attributes with NO data (${missingAttributes.length}):`, missingAttributes);
   }
 
 
@@ -809,7 +1280,7 @@ function createBarChart(container, countries, dim, extents) {
 
   const extent = extents[dim.key];
   if (!extent) {
-    console.error(`❌ No extent for ${dim.label}`);
+    console.error(`No extent for ${dim.label}`);
     chartDiv.innerHTML += '<div style="padding:40px; text-align:center; color:#ef4444;">No data available for this attribute</div>';
     return;
   }
@@ -868,12 +1339,12 @@ function createBarChart(container, countries, dim, extents) {
   })).filter(d => typeof d.value === 'number' && !Number.isNaN(d.value));
 
   if (data.length === 0) {
-    console.error(`❌ No valid data for ${dim.label}`);
+    console.error(`No valid data for ${dim.label}`);
     chartDiv.innerHTML += '<div style="padding:40px; text-align:center; color:#ef4444;">No valid data for selected countries</div>';
     return;
   }
 
-  console.log(`✅ Bar chart: ${data.length} countries with data for ${dim.label}`);
+  console.log(`Bar chart: ${data.length} countries with data for ${dim.label}`);
 
   const maxVal = Math.max(...data.map(d => d.value));
 
@@ -948,8 +1419,8 @@ function createBarChart(container, countries, dim, extents) {
 }
 
 function createRadarChart(container, countries, dims, extents) {
-  console.log(`🎯 Creating radar chart with ${dims.length} attributes:`, dims.map(d => d.label));
-  console.log(`📊 Countries:`, countries.map(c => c.Country));
+  console.log(`Creating radar chart with ${dims.length} attributes:`, dims.map(d => d.label));
+  console.log(`Countries:`, countries.map(c => c.Country));
   
   const chartDiv = document.createElement('div');
   chartDiv.className = 'chart-card';
@@ -1379,8 +1850,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const compareBtn = document.getElementById("compare-countries");
   if (compareBtn) {
-    compareBtn.addEventListener("click", compareCountries);
-  }
+    compareBtn.addEventListener("click", () => {
+    // NEW: always switch to compare mode
+    if (typeof setMode === "function") setMode("compare");
+
+    compareCountries();
+  });
+}
+
+  // NEW: mode switch buttons
+  const modeCompare = document.getElementById("mode-compare-btn");
+  const modeWeights = document.getElementById("mode-weights-btn");
+
+  if (modeCompare) modeCompare.addEventListener("click", () => setMode("compare"));
+  if (modeWeights) modeWeights.addEventListener("click", () => setMode("weights"));
 
   loadAllDataAndMerge();
 });
