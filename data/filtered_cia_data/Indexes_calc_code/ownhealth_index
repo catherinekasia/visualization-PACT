@@ -1,8 +1,9 @@
+from encodings.aliases import aliases
 import pandas as pd
 import numpy as np
 from pathlib import Path
 
-# ------------------ Paths ------------------
+# The paths to the input data files
 DEMOGRAPHICS_PATH = "visualization-PACT/data/filtered_cia_data/demographics_data.csv"
 LIFE_EXPECTANCY_PATH = "visualization-PACT/data/filtered_cia_data/life_expectancy.csv"
 HEALTHCARE_PATH = "visualization-PACT/data/filtered_cia_data/heathcare_index_data.csv"
@@ -10,36 +11,25 @@ HEALTHCARE_PATH = "visualization-PACT/data/filtered_cia_data/heathcare_index_dat
 OUT_PATH = "visualization-PACT/data/filtered_cia_data/health_index.csv"
 
 
-# ------------------ Helpers ------------------
+# The function in case names of countries are a bit different (upper/lower case)
 def canon_country(x: str) -> str:
-    """Canonical key for joining."""
+    """Canonical country key for joining (uppercased).
+    """
     if pd.isna(x):
         return np.nan
     s = str(x).strip()
-
-    aliases = {
-        "Türkiye": "TURKEY (TURKIYE)",
-        "Turkey": "TURKEY (TURKIYE)",
-        "United States of America": "UNITED STATES",
-        "United States": "UNITED STATES",
-        "United Kingdom": "UNITED KINGDOM",
-        "Czech Republic": "CZECHIA",
-        "Czech Republic (Czechia)": "CZECHIA",
-        "Korea, DPR": "KOREA, NORTH",
-        "Korea, Rep.": "KOREA, SOUTH",
-        "Korea, Rep": "KOREA, SOUTH",
-        "North Macedonia": "NORTH MACEDONIA",
-        "Bosnia and Herzegovina": "BOSNIA AND HERZEGOVINA",
-        "Hong Kong": "HONG KONG",
-        "Taiwan": "TAIWAN",
-        "DR Congo": "DEMOCRATIC REPUBLIC OF THE CONGO",
-        "Congo, Dem. Rep.": "DEMOCRATIC REPUBLIC OF THE CONGO",
-    }
+    
+    aliases = { "Türkiye": "TURKEY (TURKIYE)", "LIechtenshtein": "LIECHTENSTEIN", "Turkey": "TURKEY (TURKIYE)", "United States of America": "UNITED STATES", "United States": "UNITED STATES", "United Kingdom": "UNITED KINGDOM", "Czech Republic": "CZECHIA", "Czech Republic (Czechia)": "CZECHIA", "Korea, DPR": "KOREA, NORTH", "Korea, Rep.": "KOREA, SOUTH", "Korea, Rep": "KOREA, SOUTH", "North Macedonia": "NORTH MACEDONIA", "Bosnia and Herzegovina": "BOSNIA AND HERZEGOVINA", "Hong Kong": "HONG KONG", "Taiwan": "TAIWAN", "DR Congo": "DEMOCRATIC REPUBLIC OF THE CONGO", "Congo, Dem. Rep.": "DEMOCRATIC REPUBLIC OF THE CONGO", }
     return aliases.get(s, s).upper()
 
-
 def minmax_good(s: pd.Series) -> pd.Series:
-    """Higher = better -> 0..1"""
+    """Higher = better -> 0..1 (life expectancy, healthcare index)
+    Uses min-max scaling, then inverts it:
+        safe = 1 - (x - min) / (max - min)
+
+    - Output is relative to the countries present in the dataset (depends on min/max).
+    - Non-numeric values become NaN.
+    - If the column is empty or constant, non-missing values become 1.0 (neutral safe)."""
     s = pd.to_numeric(s, errors="coerce")
     mn, mx = s.min(skipna=True), s.max(skipna=True)
     if pd.isna(mn) or pd.isna(mx) or mx == mn:
@@ -48,7 +38,7 @@ def minmax_good(s: pd.Series) -> pd.Series:
 
 
 def minmax_bad_to_good(s: pd.Series) -> pd.Series:
-    """Higher = worse -> 0..1 where higher = better"""
+    """Higher = worse (infant mortality) -> 0..1 where higher = better"""
     s = pd.to_numeric(s, errors="coerce")
     mn, mx = s.min(skipna=True), s.max(skipna=True)
     if pd.isna(mn) or pd.isna(mx) or mx == mn:
@@ -71,20 +61,19 @@ def weighted_mean_rowwise(df: pd.DataFrame, weights: dict) -> pd.Series:
 
 
 def read_csv_flexible(path_str: str) -> pd.DataFrame:
-    """Reads CSV; helpful if you later switch to a relative path."""
+    """Reads CSV from given path, trying relative to repo root first."""
     p = Path(path_str)
     if p.exists():
         return pd.read_csv(p)
-    # fallback: try as-is (in case it's mounted differently)
     return pd.read_csv(path_str)
 
 
-# ------------------ Load ------------------
+# Loading the data 
 demo = read_csv_flexible(DEMOGRAPHICS_PATH)            # ... Infant_Mortality_Rate ...
 life = read_csv_flexible(LIFE_EXPECTANCY_PATH)         # ... Sum of Life Expectancy  (both sexes) ...
 hc = read_csv_flexible(HEALTHCARE_PATH)                # COUNTRY, HEALTH CARE INDEX, ...
 
-# ------------------ Prepare keys + select cols ------------------
+# Specifing the columns, to ensure that we don't have a problem from mixing up the columns
 demo["key"] = demo["Country"].map(canon_country)
 demo = demo[["key", "Country", "Infant_Mortality_Rate"]].rename(
     columns={"Country": "country_demo", "Infant_Mortality_Rate": "infant_mortality"}
@@ -100,23 +89,22 @@ hc = hc[["key", "COUNTRY", "HEALTH CARE INDEX"]].rename(
     columns={"COUNTRY": "country_hc", "HEALTH CARE INDEX": "healthcare_index"}
 )
 
-# ------------------ Merge ------------------
+# Merging all data into one dataframe
 df = demo.merge(life, on="key", how="outer").merge(hc, on="key", how="outer")
 df["Country"] = (
     df["country_demo"].combine_first(df["country_life"]).combine_first(df["country_hc"]).combine_first(df["key"])
 )
 
-# ------------------ Build 0..1 "good" scores ------------------
+# Build 0..1 "good" scores
 df["healthcare_good"] = minmax_good(df["healthcare_index"])          # higher better
 df["lifeexp_good"] = minmax_good(df["life_expectancy"])              # higher better
 df["infantmort_good"] = minmax_bad_to_good(df["infant_mortality"])   # higher worse -> invert
 
-# ------------------ Health Index (Type A weighted average) ------------------
-# Default weights (outcomes-focused)
+# Calculation of the health index(actual formula))
 weights = {"healthcare_good": 0.30, "lifeexp_good": 0.40, "infantmort_good": 0.30}
 df["health_index"] = 100 * weighted_mean_rowwise(df, weights)
 
-# ------------------ Save ------------------
+# The output
 out_cols = [
     "Country",
     "healthcare_index",
