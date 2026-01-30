@@ -223,7 +223,10 @@ const DATA_PATHS = {
     lifeExpectancy: 'data/filtered_cia_data/life_expectancy.csv',
     
     // Map data
-    geojson: 'resources/countries.geojson'
+    geojson: 'resources/countries.geojson',
+    
+    // Visa information
+    visaInfo: 'data/visa_info.csv'
 };
 
 // =====================================================================

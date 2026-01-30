@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             earningPotentialData: {},
             safetyData: {},
             healthData: {},
+            visaData: {},
             map: null,
         };
 
@@ -52,7 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 appState.goodCountryData,
                 appState.earningPotentialData,
                 appState.safetyData,
-                appState.healthData
+                appState.healthData,
+                appState.visaData
             );
         }
 
@@ -110,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         appState.earningPotentialData = attributeData.earningPotentialData;
                         appState.safetyData = attributeData.safetyData;
                         appState.healthData = attributeData.healthData;
+                        appState.visaData = attributeData.visaData;
                     }).catch(err => {
                         // already logged in loader
                     });

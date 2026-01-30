@@ -12,8 +12,9 @@ function loadAttributeData(callback) {
         Neutralino.filesystem.readFile(DATA_PATHS.indexes.goodCountry).then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile(DATA_PATHS.indexes.earningPotential).then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile(DATA_PATHS.indexes.safety).then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile(DATA_PATHS.indexes.health).then(data => d3.csvParse(data))
-    ]).then(([economy, demographics, communications, energy, transportation, goodCountryIndex, earningPotentialIndex, safetyIndex, healthIndex]) => {
+        Neutralino.filesystem.readFile(DATA_PATHS.indexes.health).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.visaInfo).then(data => d3.csvParse(data))
+    ]).then(([economy, demographics, communications, energy, transportation, goodCountryIndex, earningPotentialIndex, safetyIndex, healthIndex, visaInfo]) => {
         const economyData = {};
         economy.forEach(d => {
             economyData[d.Country.toUpperCase()] = d;
@@ -59,8 +60,18 @@ function loadAttributeData(callback) {
             healthData[d.Country.toUpperCase()] = d;
         });
 
+        // Group visa data by country (a country can have multiple visa types)
+        const visaData = {};
+        visaInfo.forEach(d => {
+            const country = d.Country.trim().toUpperCase();
+            if (!visaData[country]) {
+                visaData[country] = [];
+            }
+            visaData[country].push(d);
+        });
+
         console.log('Attribute data loaded');
-        const result = { economyData, demographicsData, commData, energyData, transData, goodCountryData, earningPotentialData, safetyData, healthData };
+        const result = { economyData, demographicsData, commData, energyData, transData, goodCountryData, earningPotentialData, safetyData, healthData, visaData };
         if (typeof callback === 'function') callback(null, result);
         return result;
     }).catch(err => {

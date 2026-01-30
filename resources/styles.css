@@ -234,6 +234,29 @@ body {
     position: relative;
 }
 
+/* Custom scrollbar for modal body and visa sections */
+.modal-body::-webkit-scrollbar,
+.modal-body *::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track,
+.modal-body *::-webkit-scrollbar-track {
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.modal-body *::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover,
+.modal-body *::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+}
+
 /* D3 Chart Styles */
 .radar-grid circle {
     fill: none;

@@ -70,7 +70,7 @@ function initPopup() {
     }
 }
 
-function openPopup(feature, economyData, demographicsData, commData, energyData, goodCountryData, earningPotentialData, safetyData, healthData) {
+function openPopup(feature, economyData, demographicsData, commData, energyData, goodCountryData, earningPotentialData, safetyData, healthData, visaData) {
         // Helper: map country name to ISO 2-letter code
         function getCountryCode(name) {
             const map = {
@@ -142,6 +142,48 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
     const safetyIndexVal = safety.safety_index_risk_focused ? parseFloat(safety.safety_index_risk_focused).toFixed(2) : 'N/A';
     const healthIndexVal = health.health_index ? parseFloat(health.health_index).toFixed(2) : 'N/A';
     
+    // Get visa information for this country
+    const visas = (visaData && (visaData[normalizedName] || visaData[nameUpper])) || [];
+    
+    // Build visa info HTML
+    let visaHtml = '';
+    if (visas && visas.length > 0) {
+        visaHtml = `
+        <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3 style="color: #4a90d9; margin: 0; font-size: 14px;">Work Visas & Permits</h3>
+                <span style="font-size: 11px; color: #94a3b8; background: rgba(148,163,184,0.1); padding: 2px 8px; border-radius: 3px;">${visas.length} visa${visas.length > 1 ? 's' : ''}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto; padding-right: 4px;">`;
+        
+        visas.forEach(visa => {
+            const visaName = visa['Visa Name'] || 'N/A';
+            const visaType = visa['Temporary/Permanent'] || '';
+            const education = visa['Min. Education Level'] || 'N/A';
+            const sponsor = visa['Job Sponsor (Y/N)'] || 'N/A';
+            const cost = visa['Bare bones Cost (local currency) to employee'] || 'N/A';
+            
+            visaHtml += `
+                <div style="background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 4px; border-left: 2px solid #5AD8A6;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 3px;">
+                        <strong style="color: #5AD8A6; font-size: 12px;">${visaName}</strong>
+                        <span style="font-size: 9px; color: #94a3b8; background: rgba(148,163,184,0.1); padding: 1px 5px; border-radius: 2px; white-space: nowrap;">${visaType}</span>
+                    </div>
+                    <div style="font-size: 10px; color: #cbd5e1; line-height: 1.3;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <span><span style="color: #94a3b8;">Edu:</span> ${education}</span>
+                            <span><span style="color: #94a3b8;">Sponsor:</span> ${sponsor}</span>
+                            <span><span style="color: #94a3b8;">Cost:</span> ${cost}</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        
+        visaHtml += `
+            </div>
+        </div>`;
+    }
+    
     // Build index list HTML
     const overviewEl = document.getElementById('modal-overview-text');
     overviewEl.innerHTML = `${name} has a population of ${formatNumber(demo.Total_Population)} and has the following index values:
@@ -151,7 +193,8 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
             <li><strong>Safety Index:</strong> ${safetyIndexVal}</li>
             <li><strong>Health Index:</strong> ${healthIndexVal}</li>
         </ul>
-        <a href="#" id="explain-indexes-link" style="color: #4a90d9; text-decoration: underline; cursor: pointer;">What do these indexes mean?</a>`;
+        <a href="#" id="explain-indexes-link" style="color: #4a90d9; text-decoration: underline; cursor: pointer;">What do these indexes mean?</a>
+        ${visaHtml}`;
     
     // Add click handler for explanation link using onclick directly
     const explainLink = document.getElementById('explain-indexes-link');
