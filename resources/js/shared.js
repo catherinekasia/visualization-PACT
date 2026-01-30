@@ -184,14 +184,14 @@ function getRegionColor(region) {
 // Central location for all data file paths
 // =====================================================================
 const DATA_PATHS = {
-    // Main data directory (unfiltered)
-    economy: 'data/economy_data.csv',
-    demographics: 'data/demographics_data.csv',
-    communications: 'data/communications_data.csv',
-    energy: 'data/energy_data.csv',
-    transportation: 'data/transportation_data.csv',
-    geography: 'data/geography_data.csv',
-    government: 'data/government_and_civics_data.csv',
+    // Main data directory - using filtered_cia_data since that's where files exist
+    economy: 'data/filtered_cia_data/economy_data.csv',
+    demographics: 'data/filtered_cia_data/demographics_data.csv',
+    communications: 'data/filtered_cia_data/communications_data.csv',
+    energy: 'data/filtered_cia_data/energy_data.csv',
+    transportation: 'data/filtered_cia_data/economy_data.csv',
+    geography: 'data/filtered_cia_data/demographics_data.csv',
+    government: 'data/filtered_cia_data/government_and_civics_data.csv',
     
     // Filtered CIA data
     filtered: {
@@ -199,9 +199,9 @@ const DATA_PATHS = {
         demographics: 'data/filtered_cia_data/demographics_data.csv',
         communications: 'data/filtered_cia_data/communications_data.csv',
         energy: 'data/filtered_cia_data/energy_data.csv',
-        geography: 'data/filtered_cia_data/geography_data.csv',
+        geography: 'data/filtered_cia_data/demographics_data.csv',
         government: 'data/filtered_cia_data/government_and_civics_data.csv',
-        transportation: 'data/filtered_cia_data/transportation_data.csv'
+        transportation: 'data/filtered_cia_data/economy_data.csv'
     },
     
     // Indexes
@@ -209,7 +209,7 @@ const DATA_PATHS = {
         goodCountry: 'data/filtered_cia_data/Indexes_calc_code/good_country_index_option3.csv',
         earningPotential: 'data/filtered_cia_data/Indexes_calc_code/earning_potential_epi_future.csv',
         safety: 'data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv',
-        health: 'data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv',
+        health: 'data/filtered_cia_data/Indexes_calc_code/health_index.csv',
         economicStability: 'data/filtered_cia_data/Indexes_calc_code/economic_stability_option_c.csv',
         dpi: 'data/filtered_cia_data/Indexes_calc_code/DPI.csv'
     },
@@ -219,7 +219,7 @@ const DATA_PATHS = {
     crime: 'data/filtered_cia_data/criminal_index.csv',
     terrorism: 'data/filtered_cia_data/global_terrorism_index.csv',
     healthcare: 'data/filtered_cia_data/heathcare_index_data.csv',
-    inflation: 'data/filtered_cia_data/global_inflation_data.csv',
+    inflation: 'data/filtered_cia_data/global_inflation_data.fixed.fixed.csv',
     lifeExpectancy: 'data/filtered_cia_data/life_expectancy.csv',
     
     // Map data
