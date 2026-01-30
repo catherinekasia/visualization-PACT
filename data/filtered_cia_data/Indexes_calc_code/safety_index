@@ -23,16 +23,14 @@ def canon_country(x: str) -> str:
         "United States": "UNITED STATES",
         "United Kingdom": "UNITED KINGDOM",
         "Czech Republic": "CZECHIA",
-        "Czech Republic (Czechia)": "CZECHIA",
-        "Korea, DPR": "KOREA, NORTH",
-        "KOREA, DPR": "KOREA, NORTH",
+        "Czech Republic (Czechia)": "CZECHIA"
         "Korea, Rep.": "KOREA, SOUTH",
         "Korea, Rep": "KOREA, SOUTH",
         "KOREA, REP.": "KOREA, SOUTH",
         "KOREA, REP": "KOREA, SOUTH",
         "North Macedonia": "NORTH MACEDONIA",
         "Bosnia and Herzegovina": "BOSNIA AND HERZEGOVINA",
-        "Hong Kong": "HONG KONG",
+        "China": "CHINA",
         "Taiwan": "TAIWAN",
     }
     s = aliases.get(s, s)
