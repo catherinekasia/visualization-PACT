@@ -4,6 +4,8 @@
 
 Run the following commands in the terminal when in the project directory:
 
+Node.js and npm are required to install NeutralinoJS. Please follow the installation instructions by [Node](https://nodejs.org/en/download)
+
 ```
 npm install
 ```
