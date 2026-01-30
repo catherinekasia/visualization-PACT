@@ -4,16 +4,17 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-
+# The paths to the input data files
 SCRIPT_DIR = Path(__file__).resolve().parent
-DATA_DIR = SCRIPT_DIR.parent  # .../data/filtered_cia_data
-
+DATA_DIR = SCRIPT_DIR.parent
 
 PATH_ECON_STAB = SCRIPT_DIR / "economic_stability_option_c.csv"
+PATH_ECONOMY = DATA_DIR / "economy_data.csv"
 
 OUT_FILE = SCRIPT_DIR / "earning_potential_epi_future.csv"
 
 
+# Country-column detection + standardization
 def detect_country_column(df: pd.DataFrame) -> str:
     candidates = ["COUNTRY", "Country", "country", "Country Name", "country_name", "Entity", "Location", "Name", "name"]
     for c in candidates:
@@ -25,16 +26,7 @@ def detect_country_column(df: pd.DataFrame) -> str:
             return lower_map[c.lower()]
     raise KeyError(f"Could not find a country column. Columns:\n{list(df.columns)}")
 
-def find_col(df: pd.DataFrame, any_tokens=(), all_tokens=()):
-    for col in df.columns:
-        low = col.lower()
-        if any_tokens and not any(t in low for t in any_tokens):
-            continue
-        if all_tokens and not all(t in low for t in all_tokens):
-            continue
-        return col
-    return None
-
+# Clean numeric conversion
 def to_numeric(s: pd.Series) -> pd.Series:
     x = (s.astype(str)
            .str.replace(",", "", regex=False)
@@ -43,6 +35,7 @@ def to_numeric(s: pd.Series) -> pd.Series:
     x = x.replace({"": np.nan, "NA": np.nan, "N/A": np.nan, "nan": np.nan, "None": np.nan})
     return pd.to_numeric(x, errors="coerce")
 
+# Min-max normalization to 0..1
 def minmax(series: pd.Series) -> pd.Series:
     s = to_numeric(series)
     mn = s.min(skipna=True)
@@ -53,73 +46,50 @@ def minmax(series: pd.Series) -> pd.Series:
 
 
 def main():
+    # Cheack the files exist
     if not PATH_ECON_STAB.exists():
-        raise FileNotFoundError(f"Missing file: {PATH_ECON_STAB}\nEdit PATH_ECON_STAB to your Economic Stability CSV.")
+        raise FileNotFoundError(f"Missing file: {PATH_ECON_STAB}")
+    if not PATH_ECONOMY.exists():
+        raise FileNotFoundError(f"Missing file: {PATH_ECONOMY}")
 
-    df = pd.read_csv(PATH_ECON_STAB)
+    df_stab = pd.read_csv(PATH_ECON_STAB)
+    df_econ = pd.read_csv(PATH_ECONOMY)
 
-    # Country standardization
-    country_col = detect_country_column(df)
-    df["COUNTRY_STD"] = df[country_col].astype(str).str.strip().str.upper()
+    # Country standardization (both files)
+    stab_country_col = detect_country_column(df_stab)
+    econ_country_col = detect_country_column(df_econ)
 
-    # Auto-detect required columns
-    # Economic Stability column (from your previous script)
-    col_E = None
-    for c in ["EconomicStability_E", "economicstability_e", "economic_stability_e", "E"]:
-        if c in df.columns:
-            col_E = c
-            break
-    if col_E is None:
-        # fallback: look for "stability" + maybe "economic"
-        col_E = find_col(df, any_tokens=("stability",), all_tokens=("economic",)) or find_col(df, any_tokens=("stability",), all_tokens=())
-    if col_E is None:
-        raise KeyError("Could not find Economic Stability column (expected something like 'EconomicStability_E').")
+    df_stab["COUNTRY_STD"] = df_stab[stab_country_col].astype(str).str.strip().str.upper()
+    df_econ["COUNTRY_STD"] = df_econ[econ_country_col].astype(str).str.strip().str.upper()
 
-    # GDP per capita (normalized good)
-    col_gdp = (
-        find_col(df, any_tokens=("gdp",), all_tokens=("per", "cap")) or
-        find_col(df, any_tokens=("gdp",), all_tokens=("capita",)) or
-        find_col(df, any_tokens=("gdp_per_capita", "gdp per capita"), all_tokens=())
-    )
+    # Columns from economy_data.csv (these exist in your printout)
+    COL_GDP_PC = "Real_GDP_per_Capita_USD"
+    COL_UNEMP  = "Unemployment_Rate_percent"
+    COL_GROWTH = "Real_GDP_Growth_Rate_percent"
 
-    # Unemployment (normalized bad)
-    col_unemp = find_col(df, any_tokens=("unemploy",), all_tokens=())
+    # Column from economic stability file
+    COL_E = "EconomicStability_E"
+    if COL_E not in df_stab.columns:
+        raise KeyError(f"Missing column {COL_E} in {PATH_ECON_STAB.name}")
 
-    # GDP growth (normalized good)
-    col_growth = (
-        find_col(df, any_tokens=("growth",), all_tokens=("gdp",)) or
-        find_col(df, any_tokens=("gdp",), all_tokens=("growth",)) or
-        find_col(df, any_tokens=("growth",), all_tokens=())
-    )
+    # Keep only needed columns (avoid duplicates)
+    df_econ = df_econ[["COUNTRY_STD", COL_GDP_PC, COL_UNEMP, COL_GROWTH]]
+    df_stab = df_stab[["COUNTRY_STD", COL_E]]
 
-    missing = [name for name, col in [
-        ("GDP per capita", col_gdp),
-        ("Unemployment", col_unemp),
-        ("GDP growth", col_growth),
-        ("Economic stability E", col_E),
-    ] if col is None]
-    if missing:
-        print("Available columns:", list(df.columns))
-        raise KeyError(f"Missing required columns: {missing}\n"
-                       f"Fix by setting col_gdp/col_unemp/col_growth/col_E manually.")
-    # this is here just to ensure that we are using correct columns 
-    print("Using columns:")
-    print("  Country:", country_col)
-    print("  GDP per capita:", col_gdp)
-    print("  Unemployment:", col_unemp)
-    print("  GDP growth:", col_growth)
-    print("  Economic stability E:", col_E)
+    # Merge everything to have one dataset 
+    df = df_econ.merge(df_stab, on="COUNTRY_STD", how="inner")
 
     # Normalize components
-    df["GDP_n"] = minmax(df[col_gdp])         
-    df["U_n"] = minmax(df[col_unemp])         
-    df["G_n"] = minmax(df[col_growth])        
+    df["GDP_n"] = minmax(df[COL_GDP_PC])         
+    df["U_n"]   = minmax(df[COL_UNEMP])         
+    df["G_n"]   = minmax(df[COL_GROWTH])        
 
+    # Invert unemployment (lower is better)
     df["U_good"] = 1 - df["U_n"]
 
-    # Economic Stability E might already be 0..1; if not, normalize safely:
-    E_raw = to_numeric(df[col_E])
-    if E_raw.max(skipna=True) > 1.5:  # heuristic: looks like 0..100 or similar
+    # Economic Stability E might already be 0..1; if not, normalize safely
+    E_raw = to_numeric(df[COL_E])
+    if E_raw.max(skipna=True) > 1.5:  # looks like 0..100 or similar
         df["E_n"] = minmax(E_raw)
     else:
         df["E_n"] = E_raw
@@ -132,10 +102,10 @@ def main():
     # Output
     out = pd.DataFrame({
         "COUNTRY": df["COUNTRY_STD"],
-        "GDP_per_capita_raw": to_numeric(df[col_gdp]),
-        "Unemployment_raw": to_numeric(df[col_unemp]),
-        "GDP_growth_raw": to_numeric(df[col_growth]),
-        "EconomicStability_E_raw": to_numeric(df[col_E]),
+        "GDP_per_capita_raw": to_numeric(df[COL_GDP_PC]),
+        "Unemployment_raw": to_numeric(df[COL_UNEMP]),
+        "GDP_growth_raw": to_numeric(df[COL_GROWTH]),
+        "EconomicStability_E_raw": to_numeric(df[COL_E]),
         "GDP_n": df["GDP_n"],
         "U_good": df["U_good"],
         "G_n": df["G_n"],
@@ -148,6 +118,7 @@ def main():
 
     print("Saved:", OUT_FILE)
     print("Rows:", len(out))
+    print(out.head(10))
 
 
 if __name__ == "__main__":
