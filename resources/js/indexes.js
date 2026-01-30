@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     async function readCSV(path) {
-      console.log("📂 Reading CSV:", path);
+      console.log(" Reading CSV:", path);
       const txt = await Neutralino.filesystem.readFile(path);
       return d3.csvParse(txt);
     }
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (Number.isNaN(v)) continue;
         m.set(normalizeCountryName(name), v);
       }
-      console.log(`✅ Built map for ${valueCol}: ${m.size} countries`);
+      console.log(`Built map for ${valueCol}: ${m.size} countries`);
       return m;
     }
 
@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const minV = d3.min(values);
       const maxV = d3.max(values);
 
-      console.log(`📊 ${title} - min: ${minV?.toFixed(2)}, max: ${maxV?.toFixed(2)}`);
+      console.log(` ${title} - min: ${minV?.toFixed(2)}, max: ${maxV?.toFixed(2)}`);
 
       const interp = getInterpolator(currentRamp);
 
@@ -257,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadMapData((err, mapData) => {
       if (err) {
-        host.innerHTML = `<div class="loading">❌ Failed to load map geometry.</div>`;
+        host.innerHTML = `<div class="loading"> Failed to load map geometry.</div>`;
         console.error(err);
         return;
       }
@@ -268,7 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ? mapData
           : { type: "FeatureCollection", features: mapData.features || [] });
 
-      console.log("✅ Map geometry loaded:", GEOJSON.features.length, "features");
+      console.log(" Map geometry loaded:", GEOJSON.features.length, "features");
 
       document.querySelectorAll("#index-tabs .map-btn").forEach(btn => {
         btn.addEventListener("click", async () => {
@@ -284,12 +284,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
           try {
             if (!cache.has(key)) {
-              console.log(`🔄 Loading ${cfg.title}`);
+              console.log(` Loading ${cfg.title}`);
               const rows = await readCSV(cfg.path);
               const valueCol = detectValueColumn(rows);
               if (!valueCol) throw new Error("No numeric column found");
 
-              console.log(`✅ Using column: ${valueCol}`);
+              console.log(`Using column: ${valueCol}`);
               cache.set(key, {
                 title: cfg.title,
                 valueCol,
@@ -300,7 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const item = cache.get(key);
             renderChoropleth(GEOJSON, item.map, item.title, cfg.ramp);
           } catch (e) {
-            host.innerHTML = `<div class="loading">❌ Error: ${String(e.message || e)}</div>`;
+            host.innerHTML = `<div class="loading"> Error: ${String(e.message || e)}</div>`;
             console.error(e);
           }
         });
