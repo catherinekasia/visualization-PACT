@@ -746,10 +746,17 @@ function setMode(mode) {
 
   const resultsHeader = document.getElementById("results-header");
   const viz = document.getElementById("visualizations-container");
+  const attributesPanel = document.querySelector(".attributes-panel");
+  
   if (!viz) return;
 
-  // Compare mode: normal UI behavior
+  // Compare mode: show selection panel, normal UI behavior
   if (mode === "compare") {
+  // Show the country/attribute selection panel
+  if (attributesPanel) {
+    attributesPanel.style.display = "block";
+  }
+  
   document.getElementById("weights-card")?.remove();
   document.getElementById("weights-results")?.remove();
 
@@ -767,7 +774,10 @@ function setMode(mode) {
 }
 
 
-  // Weights mode: hide compared header (not used here)
+  // Weights mode: hide selection panel and compared header
+  if (attributesPanel) {
+    attributesPanel.style.display = "none";
+  }
   if (resultsHeader) resultsHeader.style.display = "none";
   renderWeightsPage();
 }
@@ -936,12 +946,19 @@ function drawTopKBarChart(top, svgNode) {
   svg.selectAll("rect")
     .data(data)
     .join("rect")
+    .attr("class", "topk-bar-rect")
     .attr("x", pad.left)
     .attr("y", d => y(d.country))
     .attr("height", y.bandwidth())
     .attr("width", d => x(d.value) - pad.left)
     .attr("fill", d => d.color)
-    .attr("rx", 4);
+    .attr("stroke", "#1e293b")
+    .attr("stroke-width", 2)
+    .attr("rx", 4)
+    .style("cursor", "pointer")
+    .on("click", function(event, d) {
+      highlightCountryAcrossCharts(d.country);
+    });
 
   svg.selectAll("text.label")
     .data(data)
@@ -1058,27 +1075,44 @@ function drawWeightsRadar(avgProfile, topCountries, dims, svgNode) {
     const { d, pts } = pathFor(s.getVal);
 
     svg.append("path")
+      .datum({ country: s.name, color: s.color })
+      .attr("class", "weights-radar-path")
       .attr("d", d)
       .attr("fill", s.color)
       .attr("fill-opacity", si===0 ? 0.04 : 0.08)
       .attr("stroke", s.color)
       .attr("stroke-width", si===0 ? 2 : 2.5)
-      .attr("stroke-opacity", 0.9);
+      .attr("stroke-opacity", 0.9)
+      .style("cursor", si===0 ? "default" : "pointer")
+      .on("click", function(event, d) {
+        if (si !== 0) highlightCountryAcrossCharts(d.country);
+      });
 
     pts.forEach(p=>{
       svg.append("circle")
+        .datum({ country: s.name, color: s.color })
+        .attr("class", "weights-radar-point")
         .attr("cx",p.x).attr("cy",p.y)
         .attr("r", si===0 ? 3 : 4)
         .attr("fill", s.color)
         .attr("stroke","#0b1220")
-        .attr("stroke-width",2);
+        .attr("stroke-width",2)
+        .style("cursor", si===0 ? "default" : "pointer")
+        .on("click", function(event, d) {
+          if (si !== 0) highlightCountryAcrossCharts(d.country);
+        });
     });
   });
 
   // legend
   const legend = svg.append("g").attr("transform", `translate(${W-200}, 20)`);
   series.forEach((s,i)=>{
-    const g = legend.append("g").attr("transform", `translate(0, ${i*22})`);
+    const g = legend.append("g")
+      .attr("transform", `translate(0, ${i*22})`)
+      .style("cursor", i===0 ? "default" : "pointer")
+      .on("click", function() {
+        if (i !== 0) highlightCountryAcrossCharts(s.name);
+      });
     g.append("rect").attr("width",14).attr("height",14).attr("fill", s.color).attr("rx",3);
     g.append("text")
       .attr("x",20).attr("y",7).attr("dy","0.35em")
@@ -1361,6 +1395,7 @@ function createGroupedBarChart(container, countries, dims, extents) {
     .selectAll('rect')
     .data(d => normalizedData.filter(nd => nd.attribute === d.label))
     .join('rect')
+    .attr('class', 'grouped-bar-rect')
     .attr('x', d => xScale1(d.country))
     .attr('y', d => yScale(d.value))
     .attr('width', xScale1.bandwidth())
@@ -1368,7 +1403,11 @@ function createGroupedBarChart(container, countries, dims, extents) {
     .attr('fill', d => d.color)
     .attr('stroke', '#1e293b')
     .attr('stroke-width', 1.5)
-    .attr('rx', 3);
+    .attr('rx', 3)
+    .style('cursor', 'pointer')
+    .on('click', function(event, d) {
+      highlightCountryAcrossCharts(d.country);
+    });
   
   // Pattern overlays
   svg.selectAll('g.attribute-group-pattern')
@@ -1379,6 +1418,7 @@ function createGroupedBarChart(container, countries, dims, extents) {
     .selectAll('rect')
     .data(d => normalizedData.filter(nd => nd.attribute === d.label && nd.pattern !== 'none'))
     .join('rect')
+    .attr('class', 'grouped-bar-pattern')
     .attr('x', d => xScale1(d.country))
     .attr('y', d => yScale(d.value))
     .attr('width', xScale1.bandwidth())
@@ -1578,7 +1618,7 @@ function createBarChart(container, countries, dim, extents) {
   svg.selectAll('rect.bar')
     .data(data)
     .join('rect')
-    .attr('class', 'bar')
+    .attr('class', 'bar bar-country-rect')
     .attr('x', pad.left)
     .attr('y', d => yScale(d.country))
     .attr('width', d => xScale(d.value) - pad.left)
@@ -1586,13 +1626,17 @@ function createBarChart(container, countries, dim, extents) {
     .attr('fill', d => d.color)
     .attr('stroke', '#1e293b')
     .attr('stroke-width', 2)
-    .attr('rx', 4);
+    .attr('rx', 4)
+    .style('cursor', 'pointer')
+    .on('click', function(event, d) {
+      highlightCountryAcrossCharts(d.country);
+    });
   
   // Pattern overlays
   svg.selectAll('rect.pattern-overlay')
     .data(data.filter(d => d.pattern !== 'none'))
     .join('rect')
-    .attr('class', 'pattern-overlay')
+    .attr('class', 'pattern-overlay bar-country-pattern')
     .attr('x', pad.left)
     .attr('y', d => yScale(d.country))
     .attr('width', d => xScale(d.value) - pad.left)
@@ -1690,6 +1734,81 @@ function highlightCountryAcrossCharts(countryName) {
     })
     .attr('r', d => {
       if (!highlightedCountry) return 4;
+      return d.country === highlightedCountry ? 6 : 3;
+    });
+  
+  // Update bar chart elements (single bar chart)
+  d3.selectAll('.bar-country-rect')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 1;
+      return d.country === highlightedCountry ? 1 : 0.3;
+    })
+    .attr('stroke-width', d => {
+      if (!highlightedCountry) return 2;
+      return d.country === highlightedCountry ? 4 : 1;
+    });
+  
+  d3.selectAll('.bar-country-pattern')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 1;
+      return d.country === highlightedCountry ? 1 : 0.3;
+    });
+  
+  // Update grouped bar chart elements
+  d3.selectAll('.grouped-bar-rect')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 1;
+      return d.country === highlightedCountry ? 1 : 0.3;
+    })
+    .attr('stroke-width', d => {
+      if (!highlightedCountry) return 1.5;
+      return d.country === highlightedCountry ? 3 : 1;
+    });
+  
+  d3.selectAll('.grouped-bar-pattern')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 1;
+      return d.country === highlightedCountry ? 1 : 0.3;
+    });
+  
+  // Update top K bar chart (weights mode)
+  d3.selectAll('.topk-bar-rect')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 1;
+      return d.country === highlightedCountry ? 1 : 0.3;
+    })
+    .attr('stroke-width', d => {
+      if (!highlightedCountry) return 2;
+      return d.country === highlightedCountry ? 4 : 1;
+    });
+  
+  // Update weights radar (weights mode)
+  d3.selectAll('.weights-radar-path')
+    .attr('stroke-opacity', d => {
+      if (!highlightedCountry) return 0.9;
+      if (d.country === "Weighted average") return 0.9;
+      return d.country === highlightedCountry ? 1 : 0.2;
+    })
+    .attr('fill-opacity', d => {
+      if (!highlightedCountry) return d.country === "Weighted average" ? 0.04 : 0.08;
+      if (d.country === "Weighted average") return 0.04;
+      return d.country === highlightedCountry ? 0.15 : 0.03;
+    })
+    .attr('stroke-width', d => {
+      if (!highlightedCountry) return d.country === "Weighted average" ? 2 : 2.5;
+      if (d.country === "Weighted average") return 2;
+      return d.country === highlightedCountry ? 4 : 1.5;
+    });
+  
+  d3.selectAll('.weights-radar-point')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 1;
+      if (d.country === "Weighted average") return 1;
+      return d.country === highlightedCountry ? 1 : 0.2;
+    })
+    .attr('r', d => {
+      if (!highlightedCountry) return d.country === "Weighted average" ? 3 : 4;
+      if (d.country === "Weighted average") return 3;
       return d.country === highlightedCountry ? 6 : 3;
     });
 }
