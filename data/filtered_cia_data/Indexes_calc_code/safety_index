@@ -8,49 +8,41 @@ CRIME_PATH = "visualization-PACT/data/filtered_cia_data/criminal_index.csv"
 
 OUT_PATH = "visualization-PACT/data/filtered_cia_data/safety_index_risk_focused.csv"
 
-# The function in case names are a bit different
+# The function in case names of countries are a bit different (upper/lower case)
 def canon_country(x: str) -> str:
-    """Canonical country key for joining (uppercased, with a few common aliases)."""
+    """Canonical country key for joining (uppercased)."""
     if pd.isna(x):
         return np.nan
-    s = str(x).strip()
+    return str(x).strip().upper()
 
-    aliases = {
-        "Türkiye": "TURKEY (TURKIYE)",
-        "TURKIYE": "TURKEY (TURKIYE)",
-        "Turkey": "TURKEY (TURKIYE)",
-        "United States of America": "UNITED STATES",
-        "United States": "UNITED STATES",
-        "United Kingdom": "UNITED KINGDOM",
-        "Czech Republic": "CZECHIA",
-        "Czech Republic (Czechia)": "CZECHIA",
-        "North Macedonia": "NORTH MACEDONIA",
-        "Bosnia and Herzegovina": "BOSNIA AND HERZEGOVINA",
-        "China": "CHINA",
-        "Taiwan": "TAIWAN",
-    }
-    s = aliases.get(s, s)
-    return s.upper()
-
-def minmax_safe(series: pd.Series) -> pd.Series:
+def minmax_high_is_worse_to_safe(series: pd.Series) -> pd.Series:
     """
-    Convert a 'higher is worse' metric into a 0.1 'higher is safer' score
-    using min-max inversion.
+    Convert a metric where higher = worse (terrorism index, criminality index) into a 0..1 safe score where higher = safer.
+    Uses min-max scaling, then inverts it:
+        safe = 1 - (x - min) / (max - min)
+
+    - Output is relative to the countries present in the dataset (depends on min/max).
+    - Non-numeric values become NaN.
+    - If the column is empty or constant, non-missing values become 1.0 (neutral safe).
     """
     s = pd.to_numeric(series, errors="coerce")
     mn, mx = s.min(skipna=True), s.max(skipna=True)
-
     if pd.isna(mn) or pd.isna(mx) or mx == mn:
-        # If constant/empty, treat present values as 1.0 (neutral safe)
         return s.apply(lambda v: np.nan if pd.isna(v) else 1.0)
-
     return 1.0 - (s - mn) / (mx - mn)
+
+def minmax_low_is_worse_to_safe(series: pd.Series) -> pd.Series:
+    """Normalize to 0..1 where higher=safer, assuming original lower=worse (higher=better)."""
+    s = pd.to_numeric(series, errors="coerce")
+    mn, mx = s.min(skipna=True), s.max(skipna=True)
+    if pd.isna(mn) or pd.isna(mx) or mx == mn:
+        return s.apply(lambda v: np.nan if pd.isna(v) else 1.0)
+    return (s - mn) / (mx - mn)
 
 def weighted_mean_rowwise(df_safe: pd.DataFrame, weights: dict, renormalize_missing: bool = True) -> pd.Series:
     """
     Row-wise weighted mean of safe-scores (0..1).
     If renormalize_missing=True: ignores missing components and rescales weights per row.
-    If False: uses all weights regardless (missing -> NaN propagates).
     """
     cols = list(weights.keys())
     w = pd.Series(weights, dtype=float)
@@ -66,10 +58,10 @@ def weighted_mean_rowwise(df_safe: pd.DataFrame, weights: dict, renormalize_miss
 
 # Loading the data 
 peace = pd.read_csv(PEACE_PATH)     # Country,peace_index,Change
-terror = pd.read_csv(TERROR_PATH)   # country,terrorism_index,rank_change
-crime = pd.read_csv(CRIME_PATH)     # Country,Criminality 2025,Score Change 2023 - 2025,Criminality,Criminal markets,Criminal actors,Resilience
+terror = pd.read_csv(TERROR_PATH)   # Country ,terrorism_index,rank_change
+crime = pd.read_csv(CRIME_PATH)     # Country, Criminality_2025,...
 
-# Specify columns 
+# Specifing the columns, to ensure that we don't have a problem from mixing up the columns
 peace = peace.rename(columns={c: c.strip() for c in peace.columns})
 peace["country_key"] = peace["Country"].map(canon_country)
 peace = peace[["country_key", "Country", "peace_index", "Change"]].rename(
@@ -77,6 +69,7 @@ peace = peace[["country_key", "Country", "peace_index", "Change"]].rename(
 )
 
 terror = terror.rename(columns={c: c.strip() for c in terror.columns})
+# If your terror file uses "country" (lowercase), change "Country" to "country" here
 terror["country_key"] = terror["Country"].map(canon_country)
 terror = terror[["country_key", "Country", "terrorism_index", "rank_change"]].rename(
     columns={"Country": "country_terror", "rank_change": "terror_rank_change"}
@@ -100,14 +93,14 @@ crime = crime[
         "Country": "country_crime",
         "Criminality_2025": "criminality_2025",
         "Score Change 2023 - 2025": "criminality_change_2023_2025",
-        "Criminality": "criminality_components", 
+        "Criminality": "criminality_components",
         "Criminal markets": "criminal_markets",
         "Criminal actors": "criminal_actors",
         "Resilience": "resilience",
     }
 )
 
-#
+# Merge
 df = crime.merge(peace, on="country_key", how="outer").merge(terror, on="country_key", how="outer")
 
 # Choose a display name
@@ -118,12 +111,15 @@ df["Country"] = (
     .combine_first(df["country_key"])
 )
 
-
 # ---------- Build SAFE scores (0..1, higher=safer) ----------
-# All three are assumed "higher = worse" and inverted.
-df["crime_safe"] = minmax_safe(df["criminality_2025"])
-df["peace_safe"] = minmax_safe(df["peace_index"])
-df["terror_safe"] = minmax_safe(df["terrorism_index"])
+# Terrorism: higher=worse -> invert
+df["terror_safe"] = minmax_high_is_worse_to_safe(df["terrorism_index"])
+
+# Peace index: smaller=better -> still invert (higher value means less peaceful/worse)
+df["peace_safe"] = minmax_high_is_worse_to_safe(df["peace_index"])
+
+# Criminality: higher=worse -> invert
+df["crime_safe"] = minmax_high_is_worse_to_safe(df["criminality_2025"])
 
 # ---------- Risk-focused Type A weights ----------
 weights = {"crime_safe": 0.40, "terror_safe": 0.40, "peace_safe": 0.20}
