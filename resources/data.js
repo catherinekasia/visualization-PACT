@@ -13,6 +13,14 @@ let selectedAttributes = new Map();
 let DATA_LOADED = false;
 let CURRENT_MODE = "compare";     // "compare" | "weights"
 let LAST_EXTENTS_ALL = null;
+let activeVisaFilter = 'all';     // Tracks current visa filter
+
+// LocalStorage keys for caching selections
+const STORAGE_KEYS = {
+  countries: 'dataPage_selectedCountries',
+  attributes: 'dataPage_selectedAttributes',
+  visaFilter: 'dataPage_visaFilter'
+};
 
 // Use shared utilities from shared.js (access via window.SharedUtils)
 const DATA_FILES = [
@@ -136,6 +144,123 @@ function weightedAverageProfile(dims, extents, weightsMap) {
   return profile;
 }
 
+// ============================================================================
+// LOCAL STORAGE FUNCTIONS
+// ============================================================================
+
+function saveSelectionsToStorage() {
+  try {
+    // Save selected countries (just the names)
+    const countryNames = Array.from(selectedCountries.keys());
+    localStorage.setItem(STORAGE_KEYS.countries, JSON.stringify(countryNames));
+    
+    // Save selected attributes (key and metadata)
+    const attributesData = Array.from(selectedAttributes.entries()).map(([key, meta]) => ({
+      key,
+      label: meta.label,
+      category: meta.category || ''
+    }));
+    localStorage.setItem(STORAGE_KEYS.attributes, JSON.stringify(attributesData));
+    
+    // Save visa filter
+    localStorage.setItem(STORAGE_KEYS.visaFilter, activeVisaFilter);
+    
+    console.log('✅ Selections saved to localStorage');
+  } catch (e) {
+    console.warn('Failed to save selections:', e);
+  }
+}
+
+function loadSelectionsFromStorage() {
+  try {
+    // Load visa filter first
+    const savedVisaFilter = localStorage.getItem(STORAGE_KEYS.visaFilter);
+    if (savedVisaFilter) {
+      activeVisaFilter = savedVisaFilter;
+      const visaSelect = document.getElementById('visa-filter');
+      if (visaSelect) {
+        visaSelect.value = activeVisaFilter;
+      }
+    }
+    
+    // Load selected countries
+    const savedCountries = localStorage.getItem(STORAGE_KEYS.countries);
+    if (savedCountries) {
+      const countryNames = JSON.parse(savedCountries);
+      countryNames.forEach(name => {
+        const countryData = SAMPLE_DATA.find(c => c.Country === name);
+        if (countryData) {
+          selectedCountries.set(name, countryData);
+        }
+      });
+      console.log(`✅ Restored ${selectedCountries.size} countries from cache`);
+    }
+    
+    // Load selected attributes
+    const savedAttributes = localStorage.getItem(STORAGE_KEYS.attributes);
+    if (savedAttributes) {
+      const attributesData = JSON.parse(savedAttributes);
+      attributesData.forEach(attr => {
+        // Find the attribute in ATTRIBUTES
+        for (const [category, attributes] of Object.entries(ATTRIBUTES)) {
+          if (attributes[attr.key]) {
+            selectedAttributes.set(attr.key, attributes[attr.key]);
+            break;
+          }
+        }
+      });
+      console.log(`✅ Restored ${selectedAttributes.size} attributes from cache`);
+    }
+    
+    return { hasCountries: selectedCountries.size > 0, hasAttributes: selectedAttributes.size > 0 };
+  } catch (e) {
+    console.warn('Failed to load selections:', e);
+    return { hasCountries: false, hasAttributes: false };
+  }
+}
+
+function clearAllSelections() {
+  // Clear in-memory selections
+  selectedCountries.clear();
+  selectedAttributes.clear();
+  
+  // Clear localStorage
+  localStorage.removeItem(STORAGE_KEYS.countries);
+  localStorage.removeItem(STORAGE_KEYS.attributes);
+  localStorage.removeItem(STORAGE_KEYS.visaFilter);
+  
+  // Reset visa filter
+  activeVisaFilter = 'all';
+  const visaSelect = document.getElementById('visa-filter');
+  if (visaSelect) {
+    visaSelect.value = 'all';
+  }
+  
+  // Uncheck all checkboxes
+  document.querySelectorAll('.country-checkbox').forEach(cb => {
+    cb.checked = false;
+  });
+  
+  document.querySelectorAll('.attribute-checkbox').forEach(cb => {
+    cb.checked = false;
+  });
+  
+  document.querySelectorAll('.attribute-item').forEach(item => {
+    item.classList.remove('selected');
+  });
+  
+  // Update UI
+  updateSelectedCountries();
+  updateSelectedTags();
+  updateSelectedCount();
+  updateCompareButton();
+  
+  // Rebuild country selector with all filter
+  initializeCountrySelector();
+  
+  console.log('✅ All selections cleared');
+}
+
 
 // ============================================================================
 // DATA LOADING
@@ -245,7 +370,29 @@ async function loadAllDataAndMerge() {
       }
     }
     
+    // Load cached selections from localStorage
+    const cached = loadSelectionsFromStorage();
+    
     initializeCountrySelector();
+    
+    // Restore attribute checkboxes if we loaded from cache
+    if (cached.hasAttributes) {
+      document.querySelectorAll('.attribute-checkbox').forEach(checkbox => {
+        const key = checkbox.id.replace('attr-', '');
+        if (selectedAttributes.has(key)) {
+          checkbox.checked = true;
+          const item = checkbox.closest('.attribute-item');
+          if (item) item.classList.add('selected');
+        }
+      });
+      updateSelectedTags();
+    }
+    
+    // Update UI
+    if (cached.hasCountries) {
+      updateSelectedCountries();
+    }
+    
     updateCompareButton();
   } catch (e) {
     console.error("Failed to load/merge CSV files:", e);
@@ -268,11 +415,24 @@ function initializeCountrySelector() {
   }
 
   // Filter to only allowed countries (already filtered in loadAllDataAndMerge)
-  const sortedCountries = SAMPLE_DATA.sort((a, b) => 
+  // Then apply visa filter if active
+  let filteredCountries = SAMPLE_DATA;
+  
+  if (activeVisaFilter !== 'all') {
+    const visaSet = window.SharedUtils.VISA_FILTERS[activeVisaFilter];
+    if (visaSet) {
+      filteredCountries = SAMPLE_DATA.filter(c => {
+        const normalized = window.SharedUtils.normalizeCountryName(c.Country).toUpperCase();
+        return visaSet.has(normalized);
+      });
+    }
+  }
+  
+  const sortedCountries = filteredCountries.sort((a, b) => 
     (a.Country || '').localeCompare(b.Country || '')
   );
 
-  console.log(`Showing ${sortedCountries.length} allowed countries`);
+  console.log(`Showing ${sortedCountries.length} countries (filter: ${activeVisaFilter})`);
 
   container.innerHTML = `
     <input type="text" 
@@ -290,6 +450,14 @@ function initializeCountrySelector() {
       `).join('')}
     </div>
   `;
+
+  // Restore checked state for previously selected countries
+  document.querySelectorAll('.country-checkbox').forEach(checkbox => {
+    const countryName = checkbox.id.replace('country-', '');
+    if (selectedCountries.has(countryName)) {
+      checkbox.checked = true;
+    }
+  });
 
   // Search functionality
   const searchInput = document.getElementById('country-search');
@@ -320,6 +488,7 @@ function initializeCountrySelector() {
 
       updateSelectedCountries();
       updateCompareButton();
+      saveSelectionsToStorage();
     });
   });
 }
@@ -339,6 +508,9 @@ function initializeAttributes() {
     for (const [key, meta] of Object.entries(attributes)) {
       const div = document.createElement('div');
       div.className = 'attribute-item';
+      div.dataset.attributeKey = key;
+      div.dataset.attributeLabel = meta.label.toLowerCase();
+      div.dataset.category = category;
 
       div.innerHTML = `
         <input type="checkbox" class="attribute-checkbox" id="attr-${key}" aria-label="Select ${meta.label}">
@@ -360,6 +532,93 @@ function initializeAttributes() {
       });
     }
   }
+  
+  // Setup attribute search
+  setupAttributeSearch();
+  
+  // Setup group selection buttons
+  setupGroupSelectionButtons();
+}
+
+function setupAttributeSearch() {
+  const searchInput = document.getElementById('attribute-search');
+  if (!searchInput) return;
+  
+  searchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase().trim();
+    const attributeItems = document.querySelectorAll('.attribute-item');
+    const attributeGroups = document.querySelectorAll('.attribute-group');
+    
+    attributeItems.forEach(item => {
+      const label = item.dataset.attributeLabel || '';
+      const matches = label.includes(searchTerm);
+      item.style.display = matches ? 'flex' : 'none';
+    });
+    
+    // Hide groups that have no visible items
+    attributeGroups.forEach(group => {
+      const visibleItems = group.querySelectorAll('.attribute-item[style*="display: flex"], .attribute-item:not([style*="display"])');
+      const hasVisibleItems = Array.from(visibleItems).some(item => {
+        return !item.style.display || item.style.display === 'flex';
+      });
+      group.style.display = hasVisibleItems ? 'block' : 'none';
+    });
+  });
+}
+
+function setupGroupSelectionButtons() {
+  // Select All buttons
+  document.querySelectorAll('.group-select-all').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const category = btn.dataset.category;
+      selectGroupAttributes(category, true);
+    });
+  });
+  
+  // Clear All buttons
+  document.querySelectorAll('.group-clear-all').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const category = btn.dataset.category;
+      selectGroupAttributes(category, false);
+    });
+  });
+}
+
+function selectGroupAttributes(category, select) {
+  const container = document.getElementById(`${category}-attributes`);
+  if (!container) return;
+  
+  const checkboxes = container.querySelectorAll('.attribute-checkbox');
+  const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+    const item = cb.closest('.attribute-item');
+    return item && (!item.style.display || item.style.display === 'flex');
+  });
+  
+  if (select) {
+    // Check how many we can select
+    const currentCount = selectedAttributes.size;
+    const availableSlots = 10 - currentCount;
+    const uncheckedBoxes = visibleCheckboxes.filter(cb => !cb.checked);
+    
+    if (uncheckedBoxes.length > availableSlots) {
+      alert(`Can only select ${availableSlots} more attribute(s). Maximum is 10 total.`);
+      // Select only what we can
+      uncheckedBoxes.slice(0, availableSlots).forEach(cb => {
+        if (!cb.checked) cb.click();
+      });
+    } else {
+      uncheckedBoxes.forEach(cb => {
+        if (!cb.checked) cb.click();
+      });
+    }
+  } else {
+    // Uncheck all in this group
+    visibleCheckboxes.forEach(cb => {
+      if (cb.checked) cb.click();
+    });
+  }
 }
 
 function toggleAttribute(key, meta, isSelected) {
@@ -377,6 +636,7 @@ function toggleAttribute(key, meta, isSelected) {
   updateSelectedTags();
   updateSelectedCount();
   updateCompareButton();
+  saveSelectionsToStorage();
 }
 
 function updateSelectedCountries() {
@@ -401,6 +661,7 @@ function updateSelectedCountries() {
       selectedCountries.delete(name);
       updateSelectedCountries();
       updateCompareButton();
+      saveSelectionsToStorage();
     });
   }
 
@@ -435,6 +696,7 @@ function updateSelectedTags() {
       updateSelectedTags();
       updateSelectedCount();
       updateCompareButton();
+      saveSelectionsToStorage();
     });
   }
 }
@@ -1796,6 +2058,28 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeAttributes();
   updateSelectedCount();
   updateCompareButton();
+
+  // Visa filter change handler
+  const visaFilterSelect = document.getElementById('visa-filter');
+  if (visaFilterSelect) {
+    visaFilterSelect.addEventListener('change', (e) => {
+      activeVisaFilter = e.target.value;
+      console.log(`Visa filter changed to: ${activeVisaFilter}`);
+      saveSelectionsToStorage();
+      // Rebuild country selector with new filter
+      initializeCountrySelector();
+    });
+  }
+
+  // Clear all selections button
+  const clearAllBtn = document.getElementById('clear-all-selections');
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener('click', () => {
+      if (confirm('Clear all selected countries and attributes?')) {
+        clearAllSelections();
+      }
+    });
+  }
 
   const compareBtn = document.getElementById("compare-countries");
   if (compareBtn) {

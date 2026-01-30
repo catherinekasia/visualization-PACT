@@ -564,6 +564,21 @@
                ========================================== -->
           <div class="attributes-panel">
             
+            <!-- Visa Filter -->
+            <div style="margin-bottom:16px;">
+              <label style="display:block; font-size:0.85em; color:#94a3b8; margin-bottom:6px; font-weight:500;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;">
+                  <path d="M3 6h18M3 12h18M3 18h18"/>
+                </svg>
+                FILTER BY
+              </label>
+              <select id="visa-filter" style="width:100%; padding:8px; border:1px solid #475569; background:#1e293b; color:#e2e8f0; border-radius:6px; font-size:13px; cursor:pointer;">
+                <option value="all">All Countries</option>
+                <option value="eu-eea">EU / EEA / Schengen</option>
+                <option value="english">English-Speaking</option>
+              </select>
+            </div>
+            
             <!-- Country Selection -->
             <div class="section-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
@@ -594,38 +609,82 @@
               </div>
 
               <div class="selected-tags" id="selected-tags" style="margin-bottom:8px;"></div>
+              
+              <!-- Attribute Search -->
+              <input type="text" 
+                id="attribute-search" 
+                placeholder="Search attributes..." 
+                aria-label="Search attributes"
+                style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #475569; background:#1e293b; color:#e2e8f0; border-radius:6px; font-size:13px;"
+              />
 
               <div class="attributes-scroll compact">
-                <div class="attribute-group">
-                  <div class="group-title">Indexes</div>
+                <div class="attribute-group" data-category="Indexes">
+                  <div class="group-title-row">
+                    <div class="group-title">Indexes</div>
+                    <div class="group-actions">
+                      <button class="group-select-all" data-category="Indexes" title="Select all in this group">All</button>
+                      <button class="group-clear-all" data-category="Indexes" title="Clear all in this group">Clear</button>
+                    </div>
+                  </div>
                   <div id="Indexes-attributes"></div>
                 </div>
 
-                <div class="attribute-group">
-                  <div class="group-title">Demographics</div>
+                <div class="attribute-group" data-category="demographics">
+                  <div class="group-title-row">
+                    <div class="group-title">Demographics</div>
+                    <div class="group-actions">
+                      <button class="group-select-all" data-category="demographics" title="Select all in this group">All</button>
+                      <button class="group-clear-all" data-category="demographics" title="Clear all in this group">Clear</button>
+                    </div>
+                  </div>
                   <div id="demographics-attributes"></div>
                 </div>
 
-                <div class="attribute-group">
-                  <div class="group-title">Economy</div>
+                <div class="attribute-group" data-category="economy">
+                  <div class="group-title-row">
+                    <div class="group-title">Economy</div>
+                    <div class="group-actions">
+                      <button class="group-select-all" data-category="economy" title="Select all in this group">All</button>
+                      <button class="group-clear-all" data-category="economy" title="Clear all in this group">Clear</button>
+                    </div>
+                  </div>
                   <div id="economy-attributes"></div>
                 </div>
 
-                <div class="attribute-group">
-                  <div class="group-title">Energy</div>
+                <div class="attribute-group" data-category="energy">
+                  <div class="group-title-row">
+                    <div class="group-title">Energy</div>
+                    <div class="group-actions">
+                      <button class="group-select-all" data-category="energy" title="Select all in this group">All</button>
+                      <button class="group-clear-all" data-category="energy" title="Clear all in this group">Clear</button>
+                    </div>
+                  </div>
                   <div id="energy-attributes"></div>
                 </div>
 
-                <div class="attribute-group">
-                  <div class="group-title">Communications</div>
+                <div class="attribute-group" data-category="communications">
+                  <div class="group-title-row">
+                    <div class="group-title">Communications</div>
+                    <div class="group-actions">
+                      <button class="group-select-all" data-category="communications" title="Select all in this group">All</button>
+                      <button class="group-clear-all" data-category="communications" title="Clear all in this group">Clear</button>
+                    </div>
+                  </div>
                   <div id="communications-attributes"></div>
                 </div>
               </div>
             </div>
 
-            <!-- Compare Button -->
+            <!-- Action Buttons -->
             <button class="find-button" id="compare-countries" disabled style="margin-top:12px;">
               COMPARE COUNTRIES
+            </button>
+            <button class="clear-selection-button" id="clear-all-selections" style="margin-top:8px; width:100%; padding:10px; background:#1e293b; color:#94a3b8; border:1px solid #475569; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; transition: all 0.2s ease;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+              CLEAR ALL SELECTIONS
             </button>
           </div>
 

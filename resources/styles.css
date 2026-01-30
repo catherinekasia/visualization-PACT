@@ -800,11 +800,13 @@ body.page-data {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   height: auto !important;
+  min-height: 100vh;
 }
 
 /* Let layout extend on data page */
 body.page-data .main-layout {
   height: auto !important;
+  min-height: 100vh;
   overflow: visible !important;
 }
 
@@ -853,9 +855,10 @@ body.page-data .attributes-scroll {
 body.page-data {
   flex: 1;
   display: grid;
-  grid-template-rows: 340px 1fr;
+  grid-template-rows: 340px auto;
   gap: 20px;
   min-width: 0;
+  overflow-y: auto;
 }
 
 body.page-data .result-card {
@@ -863,6 +866,7 @@ body.page-data .result-card {
   border-radius: 12px;
   padding: 20px;
   border: 1px solid #334155;
+  min-height: 400px;
 }
 
 /* Titles */
@@ -893,6 +897,51 @@ body.page-data .group-title {
   margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Group title row with action buttons */
+body.page-data .group-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+body.page-data .group-actions {
+  display: flex;
+  gap: 6px;
+}
+
+body.page-data .group-select-all,
+body.page-data .group-clear-all {
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #94a3b8;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+body.page-data .group-select-all:hover {
+  background: #334155;
+  color: #5AD8A6;
+  border-color: #5AD8A6;
+}
+
+body.page-data .group-clear-all:hover {
+  background: #334155;
+  color: #E86452;
+  border-color: #E86452;
+}
+
+body.page-data .group-select-all:active,
+body.page-data .group-clear-all:active {
+  transform: scale(0.95);
 }
 
 /* Attribute items */
