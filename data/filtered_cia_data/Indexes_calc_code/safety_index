@@ -38,7 +38,7 @@ def canon_country(x: str) -> str:
 
 def minmax_safe(series: pd.Series) -> pd.Series:
     """
-    Convert a 'higher is worse' metric into a 0..1 'higher is safer' score
+    Convert a 'higher is worse' metric into a 0.1 'higher is safer' score
     using min-max inversion.
     """
     s = pd.to_numeric(series, errors="coerce")
@@ -81,9 +81,9 @@ peace = peace[["country_key", "Country", "peace_index", "Change"]].rename(
 )
 
 terror = terror.rename(columns={c: c.strip() for c in terror.columns})
-terror["country_key"] = terror["country"].map(canon_country)
-terror = terror[["country_key", "country", "terrorism_index", "rank_change"]].rename(
-    columns={"country": "country_terror", "rank_change": "terror_rank_change"}
+terror["country_key"] = terror["Country"].map(canon_country)
+terror = terror[["country_key", "Country", "terrorism_index", "rank_change"]].rename(
+    columns={"Country": "country_terror", "rank_change": "terror_rank_change"}
 )
 
 crime = crime.rename(columns={c: c.strip() for c in crime.columns})
@@ -92,7 +92,7 @@ crime = crime[
     [
         "country_key",
         "Country",
-        "Criminality 2025",
+        "Criminality_2025",
         "Score Change 2023 - 2025",
         "Criminality",
         "Criminal markets",
@@ -102,9 +102,9 @@ crime = crime[
 ].rename(
     columns={
         "Country": "country_crime",
-        "Criminality 2025": "criminality_2025",
+        "Criminality_2025": "criminality_2025",
         "Score Change 2023 - 2025": "criminality_change_2023_2025",
-        "Criminality": "criminality_components",  # to avoid name clash
+        "Criminality": "criminality_components", 
         "Criminal markets": "criminal_markets",
         "Criminal actors": "criminal_actors",
         "Resilience": "resilience",
@@ -143,14 +143,6 @@ out_cols = [
     "peace_safe",
     "terror_safe",
     "safety_index_risk_focused",
-    # metadata (optional)
-    "criminality_change_2023_2025",
-    "peace_change",
-    "terror_rank_change",
-    "criminality_components",
-    "criminal_markets",
-    "criminal_actors",
-    "resilience",
 ]
 
 df[out_cols].sort_values("safety_index_risk_focused", ascending=False).to_csv(OUT_PATH, index=False)
