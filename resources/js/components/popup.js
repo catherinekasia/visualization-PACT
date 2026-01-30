@@ -106,6 +106,9 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
     const name = feature.properties.name || feature.properties.ADMIN || 'Unknown Country';
     const nameUpper = name.toUpperCase();
     const normalizedName = normalizeCountryName(name);
+    
+    // Format country name properly (title case)
+    const displayName = window.SharedUtils.formatCountryName(name);
 
     const eco = economyData[normalizedName] || economyData[nameUpper] || {};
     const demo = demographicsData[normalizedName] || demographicsData[nameUpper] || {};
@@ -119,7 +122,7 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
     const lifeExpectancy = !isNaN(lifeExpectancyVal) ? lifeExpectancyVal.toFixed(1) + ' yrs' : 'N/A';
 
     // Update UI
-        document.getElementById('modal-country-name').textContent = name;
+        document.getElementById('modal-country-name').textContent = displayName;
         // Set flag image source based on country name (replace spaces and special chars)
         const flagImg = document.getElementById('modal-country-flag');
         if(flagImg) {
@@ -127,9 +130,9 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
             let code = getCountryCode(name);
             let flagFile = `${code}.svg`;
             let flagPath = `icons/flags/${flagFile}`;
-            console.log('Flag path for', name, ':', flagPath);
+            console.log('Flag path for', displayName, ':', flagPath);
             flagImg.src = flagPath;
-            flagImg.alt = `${name} flag`;
+            flagImg.alt = `${displayName} flag`;
             flagImg.onerror = function() {
                 console.error('Flag failed to load:', flagPath);
             };
@@ -186,7 +189,7 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
     
     // Build index list HTML
     const overviewEl = document.getElementById('modal-overview-text');
-    overviewEl.innerHTML = `${name} has a population of ${formatNumber(demo.Total_Population)} and has the following index values:
+    overviewEl.innerHTML = `${displayName} has a population of ${formatNumber(demo.Total_Population)} and has the following index values:
         <ul style="margin: 10px 0; padding-left: 20px;">
             <li><strong>Good Country Index:</strong> ${goodCountryIndexVal}</li>
             <li><strong>Earning Potential Index:</strong> ${earningPotentialVal}</li>

@@ -14,6 +14,7 @@ let DATA_LOADED = false;
 let CURRENT_MODE = "compare";     // "compare" | "weights"
 let LAST_EXTENTS_ALL = null;
 let activeVisaFilter = 'all';     // Tracks current visa filter
+let highlightedCountry = null;    // Tracks currently highlighted country on charts
 
 // LocalStorage keys for caching selections
 const STORAGE_KEYS = {
@@ -442,12 +443,14 @@ function initializeCountrySelector() {
       style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #475569; background:#1e293b; color:#e2e8f0; border-radius:6px;"
     />
     <div id="country-list" style="max-height:300px; overflow-y:auto;">
-      ${sortedCountries.map(country => `
+      ${sortedCountries.map(country => {
+        const displayName = window.SharedUtils.formatCountryName(country.Country);
+        return `
         <div class="country-item" data-country="${country.Country}">
-          <input type="checkbox" class="country-checkbox" id="country-${country.Country}" aria-label="Select ${country.Country}">
-          <label for="country-${country.Country}" class="country-label">${country.Country}</label>
+          <input type="checkbox" class="country-checkbox" id="country-${country.Country}" aria-label="Select ${displayName}">
+          <label for="country-${country.Country}" class="country-label">${displayName}</label>
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
   `;
 
@@ -646,11 +649,12 @@ function updateSelectedCountries() {
   container.innerHTML = '';
 
   for (const [name, data] of selectedCountries.entries()) {
+    const displayName = window.SharedUtils.formatCountryName(name);
     const tag = document.createElement('div');
     tag.className = 'selected-tag';
     tag.innerHTML = `
-      ${name}
-      <button class="remove-tag" data-country="${name}" aria-label="Remove ${name}">&times;</button>
+      ${displayName}
+      <button class="remove-tag" data-country="${name}" aria-label="Remove ${displayName}">&times;</button>
     `;
     container.appendChild(tag);
 
@@ -1169,12 +1173,14 @@ function createVisualizations() {
     
     const comparedList = document.getElementById('compared-countries-list');
     if (comparedList) {
-      comparedList.innerHTML = countries.map((c, i) => `
+      comparedList.innerHTML = countries.map((c, i) => {
+        const displayName = window.SharedUtils.formatCountryName(c.Country);
+        return `
         <div class="compared-country-tag">
           <div class="country-color-dot" style="background-color: ${COLORBLIND_PALETTE[i % COLORBLIND_PALETTE.length]};"></div>
-          ${c.Country}
+          ${displayName}
         </div>
-      `).join('');
+      `}).join('');
     }
   }
 
@@ -1629,6 +1635,65 @@ function createBarChart(container, countries, dim, extents) {
     .attr('color', '#64748b');
 }
 
+// ============================================================================
+// CHART INTERACTION - HIGHLIGHT COUNTRIES ACROSS ALL CHARTS
+// ============================================================================
+
+function highlightCountryAcrossCharts(countryName) {
+  if (highlightedCountry === countryName) {
+    // Toggle off if clicking same country
+    highlightedCountry = null;
+  } else {
+    highlightedCountry = countryName;
+  }
+  
+  // Update all radar chart elements
+  d3.selectAll('.radar-country-path')
+    .attr('stroke-opacity', d => {
+      if (!highlightedCountry) return 0.9;
+      return d.country === highlightedCountry ? 1 : 0.2;
+    })
+    .attr('fill-opacity', d => {
+      if (!highlightedCountry) return 0.08;
+      return d.country === highlightedCountry ? 0.15 : 0.03;
+    })
+    .attr('stroke-width', d => {
+      if (!highlightedCountry) return 2.5;
+      return d.country === highlightedCountry ? 4 : 1.5;
+    });
+  
+  d3.selectAll('.radar-country-point')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 1;
+      return d.country === highlightedCountry ? 1 : 0.2;
+    })
+    .attr('r', d => {
+      if (!highlightedCountry) return 5;
+      return d.country === highlightedCountry ? 6 : 3;
+    });
+  
+  // Update all parallel coordinates elements
+  d3.selectAll('.country-line')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 0.85;
+      return d.country === highlightedCountry ? 1 : 0.15;
+    })
+    .attr('stroke-width', d => {
+      if (!highlightedCountry) return 3;
+      return d.country === highlightedCountry ? 5 : 1.5;
+    });
+  
+  d3.selectAll('.pc-point')
+    .attr('opacity', d => {
+      if (!highlightedCountry) return 0.95;
+      return d.country === highlightedCountry ? 1 : 0.2;
+    })
+    .attr('r', d => {
+      if (!highlightedCountry) return 4;
+      return d.country === highlightedCountry ? 6 : 3;
+    });
+}
+
 function createRadarChart(container, countries, dims, extents) {
   console.log(`Creating radar chart with ${dims.length} attributes:`, dims.map(d => d.label));
   console.log(`Countries:`, countries.map(c => c.Country));
@@ -1804,20 +1869,26 @@ function createRadarChart(container, countries, dims, extents) {
 
     // Draw filled polygon with base color - MORE TRANSPARENT
     svg.append('path')
+      .datum({ country: country.Country, color })
+      .attr('class', 'radar-country-path')
       .attr('d', pathData)
       .attr('fill', color)
-      .attr('fill-opacity', 0.08) // Changed from 0.15 to 0.08
+      .attr('fill-opacity', 0.08)
       .attr('stroke', color)
-      .attr('stroke-width', 2.5) // Changed from 3 to 2.5
+      .attr('stroke-width', 2.5)
       .attr('stroke-linejoin', 'round')
-      .attr('stroke-opacity', 0.9);
+      .attr('stroke-opacity', 0.9)
+      .style('cursor', 'pointer')
+      .on('click', function(event, d) {
+        highlightCountryAcrossCharts(d.country);
+      });
     
     // Add pattern overlay if not 'none' - MORE TRANSPARENT
     if (pattern !== 'none') {
       svg.append('path')
         .attr('d', pathData)
         .attr('fill', `url(#radar-pattern-${pattern}-${timestamp})`)
-        .attr('fill-opacity', 0.2) // Changed from 0.3 to 0.2
+        .attr('fill-opacity', 0.2)
         .attr('stroke', 'none')
         .style('pointer-events', 'none');
     }
@@ -1825,12 +1896,18 @@ function createRadarChart(container, countries, dims, extents) {
     // Draw points at vertices for better visibility - SLIGHTLY BIGGER
     points.forEach(p => {
       svg.append('circle')
+        .datum({ country: country.Country, color })
+        .attr('class', 'radar-country-point')
         .attr('cx', p.x)
         .attr('cy', p.y)
-        .attr('r', 5) // Changed from 4 to 5
+        .attr('r', 5)
         .attr('fill', color)
         .attr('stroke', '#0b1220')
-        .attr('stroke-width', 2.5); // Changed from 2 to 2.5
+        .attr('stroke-width', 2.5)
+        .style('cursor', 'pointer')
+        .on('click', function(event, d) {
+          highlightCountryAcrossCharts(d.country);
+        });
     });
   });
 
@@ -1840,7 +1917,11 @@ function createRadarChart(container, countries, dims, extents) {
 
   countries.forEach((c, i) => {
     const g = legend.append('g')
-      .attr('transform', `translate(0, ${i * 25})`);
+      .attr('transform', `translate(0, ${i * 25})`)
+      .style('cursor', 'pointer')
+      .on('click', function() {
+        highlightCountryAcrossCharts(c.Country);
+      });
 
     const color = COLORBLIND_PALETTE[i % COLORBLIND_PALETTE.length];
     const pattern = PATTERNS[i % PATTERNS.length];
@@ -2006,7 +2087,11 @@ function createParallelCoordinates(container, countries, dims, extents) {
     .attr("stroke", d => d.color)
     .attr("stroke-width", 3)
     .attr("stroke-dasharray", d => d.dash || null)
-    .attr("opacity", 0.85);
+    .attr("opacity", 0.85)
+    .style("cursor", "pointer")
+    .on("click", function(event, d) {
+      highlightCountryAcrossCharts(d.country);
+    });
 
   const pointsG = svg.append("g").attr("class", "pc-points");
 
@@ -2024,14 +2109,23 @@ function createParallelCoordinates(container, countries, dims, extents) {
     .attr("fill", d => d.color)
     .attr("stroke", "#0b1220")
     .attr("stroke-width", 2)
-    .attr("opacity", 0.95);
+    .attr("opacity", 0.95)
+    .style("cursor", "pointer")
+    .on("click", function(event, d) {
+      highlightCountryAcrossCharts(d.country);
+    });
 
   // Legend
   const legend = svg.append("g")
     .attr("transform", `translate(${pad.left}, ${H - pad.bottom + 20})`);
 
   countrySeries.forEach((s, i) => {
-    const row = legend.append("g").attr("transform", `translate(${i * 190}, 0)`);
+    const row = legend.append("g")
+      .attr("transform", `translate(${i * 190}, 0)`)
+      .style("cursor", "pointer")
+      .on("click", function() {
+        highlightCountryAcrossCharts(s.country);
+      });
 
     row.append("line")
       .attr("x1", 0).attr("x2", 34)

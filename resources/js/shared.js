@@ -278,6 +278,73 @@ function parseNumericValue(val) {
     return null;
 }
 
+/**
+ * Format country name to title case (proper capitalization)
+ * @param {string} name - Country name (may be all caps or mixed case)
+ * @returns {string} - Properly formatted country name
+ */
+function formatCountryName(name) {
+    if (!name) return '';
+    
+    // Special cases that need specific formatting
+    const specialCases = {
+        'UNITED STATES': 'United States',
+        'UNITED STATES OF AMERICA': 'United States of America',
+        'UNITED KINGDOM': 'United Kingdom',
+        'UNITED ARAB EMIRATES': 'United Arab Emirates',
+        'NEW ZEALAND': 'New Zealand',
+        'SOUTH KOREA': 'South Korea',
+        'NORTH KOREA': 'North Korea',
+        'CZECH REPUBLIC': 'Czech Republic',
+        'COSTA RICA': 'Costa Rica',
+        'PUERTO RICO': 'Puerto Rico',
+        'EL SALVADOR': 'El Salvador',
+        'SAUDI ARABIA': 'Saudi Arabia',
+        'SOUTH AFRICA': 'South Africa',
+        'SOUTH SUDAN': 'South Sudan',
+        'NORTH MACEDONIA': 'North Macedonia',
+        'BOSNIA AND HERZEGOVINA': 'Bosnia and Herzegovina',
+        'TRINIDAD AND TOBAGO': 'Trinidad and Tobago',
+        'ANTIGUA AND BARBUDA': 'Antigua and Barbuda',
+        'SAINT KITTS AND NEVIS': 'Saint Kitts and Nevis',
+        'SAINT VINCENT AND THE GRENADINES': 'Saint Vincent and the Grenadines',
+        'SAO TOME AND PRINCIPE': 'São Tomé and Príncipe',
+        'TIMOR-LESTE': 'Timor-Leste',
+        'COTE DIVOIRE': 'Côte d\'Ivoire',
+        'CABO VERDE': 'Cabo Verde',
+        'BURKINA FASO': 'Burkina Faso',
+        'SIERRA LEONE': 'Sierra Leone',
+        'PAPUA NEW GUINEA': 'Papua New Guinea',
+        'SOLOMON ISLANDS': 'Solomon Islands',
+        'MARSHALL ISLANDS': 'Marshall Islands',
+        'CENTRAL AFRICAN REPUBLIC': 'Central African Republic',
+        'EQUATORIAL GUINEA': 'Equatorial Guinea',
+        'GUINEA-BISSAU': 'Guinea-Bissau'
+    };
+    
+    const upper = name.toUpperCase().trim();
+    
+    // Check special cases first
+    if (specialCases[upper]) {
+        return specialCases[upper];
+    }
+    
+    // Title case conversion for other names
+    // Split on spaces, hyphens, and preserve them
+    return name.toLowerCase().split(/(\s+|-|,)/).map((word, index) => {
+        // Keep separators as-is
+        if (word.match(/^\s+$/) || word === '-' || word === ',') {
+            return word;
+        }
+        // Don't capitalize articles and prepositions (unless first word)
+        if (index > 0 && ['and', 'of', 'the', 'de', 'la', 'da'].includes(word.toLowerCase())) {
+            return word.toLowerCase();
+        }
+        // Capitalize first letter
+        return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join('');
+}
+
 // Export for use in other modules (if using ES modules)
 // For script tag usage, these are available globally
 if (typeof window !== 'undefined') {
@@ -294,6 +361,7 @@ if (typeof window !== 'undefined') {
         getRegionColor,
         formatNumber,
         formatLargeNumber,
-        parseNumericValue
+        parseNumericValue,
+        formatCountryName
     };
 }
