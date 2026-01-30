@@ -25,37 +25,36 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // Use shared utilities from shared.js
+    const { normalizeCountryName, DATA_PATHS } = window.SharedUtils;
+
     const INDEXES = {
       gpi: {
         title: "Global Peace Index",
-        path: "data/filtered_cia_data/global_peace_index.csv",
+        path: DATA_PATHS.peace,
         ramp: "blues"
       },
       crime: {
         title: "Criminal Index",
-        path: "data/filtered_cia_data/criminal_index.csv",
+        path: DATA_PATHS.crime,
         ramp: "purples"
       },
       gti: {
         title: "Global Terrorism Index",
-        path: "data/filtered_cia_data/global_terrorism_index.csv",
+        path: DATA_PATHS.terrorism,
         ramp: "reds"
       },
       safety: {
         title: "Safety Index (Risk)",
-        path: "data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv",
+        path: DATA_PATHS.indexes.safety,
         ramp: "oranges"
       },
       health: {
         title: "Own Health Index",
-        path: "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv",
+        path: DATA_PATHS.indexes.health,
         ramp: "greens"
       }
     };
-
-    function normalizeCountryName(x) {
-      return String(x ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-    }
 
     async function readCSV(path) {
       console.log("📂 Reading CSV:", path);

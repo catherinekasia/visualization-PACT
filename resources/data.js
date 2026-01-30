@@ -14,36 +14,18 @@ let DATA_LOADED = false;
 let CURRENT_MODE = "compare";     // "compare" | "weights"
 let LAST_EXTENTS_ALL = null;
 
-// Allowed countries list (Europe, select East Asia, AU/NZ, North America)
-const ALLOWED_COUNTRIES = new Set([
-  // Europe
-  'PORTUGAL', 'SPAIN', 'ANDORRA', 'MONACO', 'FRANCE', 'UNITED KINGDOM', 'IRELAND', 'ITALY',
-  'MALTA', 'LUXEMBOURG', 'BELGIUM', 'NETHERLANDS', 'GERMANY', 'SWITZERLAND', 'AUSTRIA',
-  'SLOVENIA', 'CROATIA', 'BOSNIA AND HERZEGOVINA', 'MONTENEGRO', 'ALBANIA', 'GREECE',
-  'TURKEY (TURKIYE)', 'TURKEY', 'BULGARIA', 'NORTH MACEDONIA', 'KOSOVO', 'SERBIA', 'HUNGARY',
-  'SLOVAKIA', 'CZECHIA', 'CZECH REPUBLIC', 'POLAND', 'UKRAINE', 'ROMANIA', 'MOLDOVA',
-  'REPUBLIC OF MOLDOVA', 'BELARUS', 'RUSSIA', 'RUSSIAN FEDERATION', 'LITHUANIA', 'LATVIA', 
-  'ESTONIA', 'FINLAND', 'SWEDEN', 'NORWAY', 'DENMARK', 'LIECHTENSTEIN', 'ICELAND',
-  // East Asia
-  'JAPAN', 'KOREA, SOUTH', 'SOUTH KOREA', 'TAIWAN', 'CHINA', 'SINGAPORE', 'HONG KONG',
-  'VIETNAM',
-  // Oceania
-  'AUSTRALIA', 'NEW ZEALAND',
-  // North America
-  'CANADA', 'UNITED STATES', 'UNITED STATES OF AMERICA', 'USA', 'MEXICO', 'GREENLAND'
-]);
-
+// Use shared utilities from shared.js (access via window.SharedUtils)
 const DATA_FILES = [
-  "data/filtered_cia_data/demographics_data.csv",
-  "data/filtered_cia_data/communications_data.csv",
-  "data/filtered_cia_data/economy_data.csv",
-  "data/filtered_cia_data/energy_data.csv",
-  "data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv",
-  "data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv",
-  "data/filtered_cia_data/Indexes_calc_code/DPI.csv",
-  "data/filtered_cia_data/Indexes_calc_code/earning_potential_epi_future.csv",
-  "data/filtered_cia_data/Indexes_calc_code/economic_stability_option_c.csv",
-  "data/filtered_cia_data/Indexes_calc_code/good_country_index_option3.csv"
+  window.SharedUtils.DATA_PATHS.filtered.demographics,
+  window.SharedUtils.DATA_PATHS.filtered.communications,
+  window.SharedUtils.DATA_PATHS.filtered.economy,
+  window.SharedUtils.DATA_PATHS.filtered.energy,
+  window.SharedUtils.DATA_PATHS.indexes.safety,
+  window.SharedUtils.DATA_PATHS.indexes.health,
+  window.SharedUtils.DATA_PATHS.indexes.dpi,
+  window.SharedUtils.DATA_PATHS.indexes.earningPotential,
+  window.SharedUtils.DATA_PATHS.indexes.economicStability,
+  window.SharedUtils.DATA_PATHS.indexes.goodCountry
 ];
 
 // Colorblind-friendly palette
@@ -55,39 +37,6 @@ const COLORBLIND_PALETTE = [
   '#49A9FF', // blue
   '#C385EF', // purple
 ];
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-function isAllowedCountry(countryName) {
-  if (!countryName) return false;
-  const name = String(countryName).toUpperCase().trim();
-  if (ALLOWED_COUNTRIES.has(name)) return true;
-  // Check partial matches
-  for (const allowed of ALLOWED_COUNTRIES) {
-    if (name.includes(allowed) || allowed.includes(name)) return true;
-  }
-  return false;
-}
-
-function normalizeCountryName(name) {
-  if (!name) return '';
-  let norm = name.toLowerCase().trim().replace(/[^a-z0-9 ]/g, '');
-  const aliases = {
-    'united states': 'united states of america',
-    'usa': 'united states of america',
-    'uk': 'united kingdom',
-    'russia': 'russian federation',
-    'south korea': 'korea, south',
-    'north korea': 'korea, north',
-    'ivory coast': 'cote divoire',
-    'czechia': 'czech republic',
-    'viet nam': 'vietnam',
-  };
-  if (aliases[norm]) return aliases[norm];
-  return norm;
-}
 
 // ============================================================================
 // WEIGHTS MODE HELPERS (NEW)
@@ -225,7 +174,7 @@ async function loadAllDataAndMerge() {
         if (!country) continue;
         
         // Only include allowed countries
-        if (!isAllowedCountry(country)) continue;
+        if (!window.SharedUtils.isAllowedCountry(country)) continue;
         
         // Map CSV column names with multiple normalization strategies
         const mappedRow = {};
@@ -268,7 +217,7 @@ async function loadAllDataAndMerge() {
           mappedRow[normalized1.toLowerCase()] = coerced;
         }
         
-        const k = normalizeCountryName(country);
+        const k = window.SharedUtils.normalizeCountryName(country);
         const prev = merged.get(k) || { Country: country };
         merged.set(k, { ...prev, ...mappedRow, Country: prev.Country || country });
       }

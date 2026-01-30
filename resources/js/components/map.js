@@ -37,18 +37,8 @@ function initMap(canvas, initialCountries, onCountrySelected) {
     ]);
 
     // Allowed country names (for countries without standard ISO codes in GeoJSON)
-    const allowedNames = new Set([
-        'PORTUGAL', 'SPAIN', 'ANDORRA', 'MONACO', 'FRANCE', 'UNITED KINGDOM', 'IRELAND', 'ITALY', 
-        'MALTA', 'LUXEMBOURG', 'BELGIUM', 'NETHERLANDS', 'GERMANY', 'SWITZERLAND', 'AUSTRIA',
-        'SLOVENIA', 'CROATIA', 'BOSNIA AND HERZEGOVINA', 'MONTENEGRO', 'ALBANIA', 'GREECE', 
-        'TURKEY', 'TURKEY (TURKIYE)', 'BULGARIA', 'NORTH MACEDONIA', 'KOSOVO', 'SERBIA', 'HUNGARY', 
-        'SLOVAKIA', 'CZECHIA', 'CZECH REPUBLIC', 'POLAND', 'UKRAINE', 'ROMANIA', 'MOLDOVA', 
-        'REPUBLIC OF MOLDOVA', 'BELARUS', 'RUSSIA', 'RUSSIAN FEDERATION', 'LITHUANIA', 'LATVIA', 
-        'ESTONIA', 'FINLAND', 'SWEDEN', 'NORWAY', 'DENMARK', 'LIECHTENSTEIN', 'ICELAND',
-        'JAPAN', 'SOUTH KOREA', 'KOREA, SOUTH', 'TAIWAN', 'CHINA', 'SINGAPORE',
-        'AUSTRALIA', 'NEW ZEALAND',
-        'CANADA', 'UNITED STATES', 'UNITED STATES OF AMERICA', 'USA', 'MEXICO', 'GREENLAND'
-    ]);
+    // Use shared ALLOWED_COUNTRIES from shared.js
+    const allowedNames = window.SharedUtils.ALLOWED_COUNTRIES;
 
     function isDisabledCountry(feature) {
         if (!feature || !feature.properties) return true;

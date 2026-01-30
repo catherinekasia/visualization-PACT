@@ -210,7 +210,8 @@ const DATA_PATHS = {
         earningPotential: 'data/filtered_cia_data/Indexes_calc_code/earning_potential_epi_future.csv',
         safety: 'data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv',
         health: 'data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv',
-        economicStability: 'data/filtered_cia_data/Indexes_calc_code/economic_stability_option_c.csv'
+        economicStability: 'data/filtered_cia_data/Indexes_calc_code/economic_stability_option_c.csv',
+        dpi: 'data/filtered_cia_data/Indexes_calc_code/DPI.csv'
     },
     
     // Other indexes

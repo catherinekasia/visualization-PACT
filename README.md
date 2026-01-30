@@ -222,7 +222,7 @@ The app divides countries into 7 regions with distinct colors:
 - **Framework**: [NeutralinoJS](https://neutralino.js.org/) - Lightweight desktop app
 - **Visualization**: [D3.js v7](https://d3js.org/) - Data-driven visualizations
 - **CSV Parsing**: [Papa Parse](https://www.papaparse.com/) (Data View) / D3 (others)
-- **Map Data**: GeoJSON country boundaries
+- **Map Data**: [GeoJSON](https://github.com/datasets/geo-countries) GeoJSON country boundaries
 
 ---
 

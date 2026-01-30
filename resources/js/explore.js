@@ -68,35 +68,11 @@ const variables = {
 // Parallel coordinates dimensions
 const pcDimensions = ['population', 'gdp_per_capita', 'life_expectancy', 'unemployment', 'literacy', 'safety'];
 
-// Region colors - isoluminant palette (constant perceived brightness ~L=65)
-// All colors have similar luminance for accessibility and visual balance
-const regionColors = {
-    'Western Europe': '#5B8FF9',   // Blue
-    'Northern Europe': '#9D7FEA',  // Violet
-    'Central Europe': '#5AD8A6',   // Teal-green
-    'Eastern Europe': '#F6BD16',   // Gold
-    'East Asia': '#E86452',        // Coral
-    'North America': '#6DC8EC',    // Sky blue
-    'Oceania': '#FF9845',          // Orange
-    'Unknown': '#8C8C8C'           // Gray
-};
-
-// Visa/Migration Filter Groups
-// EU/EEA/Schengen - Free movement zone for EU citizens
-// English-Speaking - Countries where English is the primary language
-const visaFilters = {
-    'all': null, // No filter - show all countries
-    'eu-eea': new Set([
-        'AUSTRIA', 'BELGIUM', 'BULGARIA', 'CROATIA', 'CZECHIA', 'CZECH REPUBLIC', 'DENMARK', 
-        'ESTONIA', 'FINLAND', 'FRANCE', 'GERMANY', 'GREECE', 'HUNGARY', 'ICELAND', 'IRELAND', 
-        'ITALY', 'LATVIA', 'LIECHTENSTEIN', 'LITHUANIA', 'LUXEMBOURG', 'MALTA', 'NETHERLANDS', 
-        'NORWAY', 'POLAND', 'PORTUGAL', 'ROMANIA', 'SLOVAKIA', 'SLOVENIA', 'SPAIN', 'SWEDEN', 
-        'SWITZERLAND'
-    ]),
-    'english': new Set([
-        'UNITED KINGDOM', 'IRELAND', 'UNITED STATES', 'CANADA', 'AUSTRALIA', 'NEW ZEALAND'
-    ])
-};
+// Use shared utilities from shared.js
+// Access functions directly via window.SharedUtils to avoid conflicts
+const allowedCountries = window.SharedUtils.ALLOWED_COUNTRIES;
+const regionColors = window.SharedUtils.REGION_COLORS;
+const visaFilters = window.SharedUtils.VISA_FILTERS;
 
 // Current active filter
 let activeVisaFilter = 'all';
@@ -105,73 +81,6 @@ let activeVisaFilter = 'all';
 let currentGdpThresholds = [];
 let currentPopThresholds = [];
 let activeLegendFilter = null; // { type: 'region'|'gdp'|'population', index: number }
-
-// Allowed countries list
-const allowedCountries = new Set([
-    // Europe
-    'PORTUGAL', 'SPAIN', 'ANDORRA', 'MONACO', 'FRANCE', 'UNITED KINGDOM', 'IRELAND', 'ITALY',
-    'MALTA', 'LUXEMBOURG', 'BELGIUM', 'NETHERLANDS', 'GERMANY', 'SWITZERLAND', 'AUSTRIA',
-    'SLOVENIA', 'CROATIA', 'BOSNIA AND HERZEGOVINA', 'MONTENEGRO', 'ALBANIA', 'GREECE',
-    'TURKEY (TURKIYE)', 'TURKEY', 'BULGARIA', 'NORTH MACEDONIA', 'KOSOVO', 'SERBIA', 'HUNGARY',
-    'SLOVAKIA', 'CZECHIA', 'CZECH REPUBLIC', 'POLAND', 'UKRAINE', 'ROMANIA', 'MOLDOVA',
-    'BELARUS', 'RUSSIA', 'LITHUANIA', 'LATVIA', 'ESTONIA', 'FINLAND', 'SWEDEN', 'NORWAY',
-    'DENMARK', 'LIECHTENSTEIN', 'ICELAND',
-    // East Asia
-    'JAPAN', 'KOREA, SOUTH', 'SOUTH KOREA', 'TAIWAN', 'CHINA', 'SINGAPORE',
-    // Oceania
-    'AUSTRALIA', 'NEW ZEALAND',
-    // North America
-    'CANADA', 'UNITED STATES', 'MEXICO', 'GREENLAND'
-]);
-
-// Region detection based on country name
-function getRegion(countryName) {
-    const name = countryName.toUpperCase();
-    
-    // Western Europe: UK, Ireland, France, Benelux, Iberia, Italy, Switzerland
-    const westernEurope = ['ANDORRA', 'BELGIUM', 'FRANCE', 'IRELAND', 'ITALY', 
-        'LUXEMBOURG', 'MALTA', 'MONACO', 'NETHERLANDS', 'PORTUGAL', 'SPAIN', 
-        'SWITZERLAND', 'UNITED KINGDOM'];
-    
-    // Northern Europe: Nordic countries
-    const northernEurope = ['DENMARK', 'FINLAND', 'ICELAND', 'NORWAY', 'SWEDEN'];
-    
-    // Central Europe: Germany, Austria, Visegrad, Slovenia, Liechtenstein
-    const centralEurope = ['AUSTRIA', 'CROATIA', 'CZECHIA', 'CZECH REPUBLIC', 'GERMANY', 
-        'HUNGARY', 'LIECHTENSTEIN', 'POLAND', 'SLOVAKIA', 'SLOVENIA'];
-    
-    // Eastern Europe: Balkans, Baltics, former Soviet states, Greece, Turkey
-    const easternEurope = ['ALBANIA', 'BELARUS', 'BOSNIA', 'BULGARIA', 'ESTONIA', 'GREECE', 
-        'KOSOVO', 'LATVIA', 'LITHUANIA', 'MOLDOVA', 'MONTENEGRO', 'NORTH MACEDONIA', 
-        'ROMANIA', 'RUSSIA', 'SERBIA', 'TURKEY', 'UKRAINE'];
-    
-    const eastAsia = ['CHINA', 'JAPAN', 'KOREA', 'SINGAPORE', 'TAIWAN'];
-    
-    const northAmerica = ['CANADA', 'GREENLAND', 'MEXICO', 'UNITED STATES'];
-    
-    const oceania = ['AUSTRALIA', 'NEW ZEALAND'];
-    
-    if (westernEurope.some(c => name.includes(c))) return 'Western Europe';
-    if (northernEurope.some(c => name.includes(c))) return 'Northern Europe';
-    if (centralEurope.some(c => name.includes(c))) return 'Central Europe';
-    if (easternEurope.some(c => name.includes(c))) return 'Eastern Europe';
-    if (eastAsia.some(c => name.includes(c))) return 'East Asia';
-    if (northAmerica.some(c => name.includes(c))) return 'North America';
-    if (oceania.some(c => name.includes(c))) return 'Oceania';
-    
-    return 'Unknown';
-}
-
-function isAllowedCountry(countryName) {
-    const name = countryName.toUpperCase();
-    // Check direct match
-    if (allowedCountries.has(name)) return true;
-    // Check partial matches for country name variations
-    for (const allowed of allowedCountries) {
-        if (name.includes(allowed) || allowed.includes(name)) return true;
-    }
-    return false;
-}
 
 // Initialize on Neutralino ready
 Neutralino.init();
@@ -186,13 +95,14 @@ Neutralino.events.on('ready', async () => {
 });
 
 async function loadAllData() {
+    const DATA_PATHS = window.SharedUtils.DATA_PATHS;
     const [economy, demographics, communications, energy, safetyIndex, healthIndex] = await Promise.all([
-        Neutralino.filesystem.readFile('data/economy_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/demographics_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/communications_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/energy_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv').then(data => d3.csvParse(data))
+        Neutralino.filesystem.readFile(DATA_PATHS.economy).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.demographics).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.communications).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.energy).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.indexes.safety).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.indexes.health).then(data => d3.csvParse(data))
     ]);
     
     // Create lookup maps
@@ -226,7 +136,7 @@ async function loadAllData() {
         if (!country || country === 'COUNTRY' || country.includes('OCEAN') || country.includes('ISLAND')) return;
         
         // Only include allowed countries
-        if (!isAllowedCountry(country)) return;
+        if (!window.SharedUtils.isAllowedCountry(country)) return;
         
         const record = {
             country: country,
@@ -236,7 +146,7 @@ async function loadAllData() {
             energy: energyMap[country] || {},
             safety: safetyMap[country] || {},
             health: healthMap[country] || {},
-            region: getRegion(country)
+            region: window.SharedUtils.getRegion(country)
         };
         
         // Only include if we have at least population data

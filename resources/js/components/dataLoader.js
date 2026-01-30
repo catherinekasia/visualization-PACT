@@ -1,15 +1,18 @@
+// Use shared utilities for data paths - access via window.SharedUtils.DATA_PATHS
+
 function loadAttributeData(callback) {
     // Return a Promise so callers can `await` or use callbacks for backward-compatibility
+    const DATA_PATHS = window.SharedUtils.DATA_PATHS;
     const p = Promise.all([
-        Neutralino.filesystem.readFile('data/economy_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/demographics_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/communications_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/energy_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/transportation_data.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/good_country_index_option3.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/earning_potential_epi_future.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/safety_index_risk_focused.csv').then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile('data/filtered_cia_data/Indexes_calc_code/ownhealth_index.csv').then(data => d3.csvParse(data))
+        Neutralino.filesystem.readFile(DATA_PATHS.economy).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.demographics).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.communications).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.energy).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.transportation).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.indexes.goodCountry).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.indexes.earningPotential).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.indexes.safety).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.indexes.health).then(data => d3.csvParse(data))
     ]).then(([economy, demographics, communications, energy, transportation, goodCountryIndex, earningPotentialIndex, safetyIndex, healthIndex]) => {
         const economyData = {};
         economy.forEach(d => {
@@ -71,7 +74,8 @@ function loadAttributeData(callback) {
 }
 
 function loadMapData(callback) {
-    Neutralino.filesystem.readFile('resources/countries.geojson')
+    const DATA_PATHS = window.SharedUtils.DATA_PATHS;
+    Neutralino.filesystem.readFile(DATA_PATHS.geojson)
         .then(data => {
             const geojson = JSON.parse(data);
             console.log('Map data loaded:', geojson.features.length, 'countries');
