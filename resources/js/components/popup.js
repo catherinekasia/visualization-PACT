@@ -109,6 +109,55 @@ function openPopup(feature, economyData, demographicsData, commData, energyData,
     
     // Format country name properly (title case)
     const displayName = window.SharedUtils.formatCountryName(name);
+    
+    // Check if this is Greenland - special handling
+    if (window.SharedUtils.isGreenland(name)) {
+        document.getElementById('modal-country-name').textContent = displayName;
+        const flagImg = document.getElementById('modal-country-flag');
+        if(flagImg) {
+            let code = getCountryCode(name);
+            let flagFile = `${code}.svg`;
+            let flagPath = `icons/flags/${flagFile}`;
+            flagImg.src = flagPath;
+            flagImg.alt = `${displayName} flag`;
+        }
+        document.getElementById('modal-happiness-val').textContent = 'N/A';
+        
+        const overviewEl = document.getElementById('modal-overview-text');
+        overviewEl.innerHTML = `
+            <div style="background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; padding: 12px; border-radius: 4px; margin: 10px 0;">
+                <div style="display: flex; align-items: start; gap: 10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <div style="color: #e2e8f0; font-size: 13px; line-height: 1.5;">
+                        <strong style="color: #38bdf8; display: block; margin-bottom: 6px;">About Greenland Data</strong>
+                        ${window.SharedUtils.getGreenlandMessage()}
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 4px;">
+                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Quick Facts:</div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #cbd5e1;">
+                    <li>Autonomous territory within the Kingdom of Denmark</li>
+                    <li>Population: ~56,000 (2024)</li>
+                    <li>Capital: Nuuk</li>
+                    <li>Uses Danish Krone (DKK)</li>
+                </ul>
+            </div>
+        `;
+        
+        // Clear the charts section or hide it
+        const chartsSection = document.getElementById('modal-charts-container');
+        if (chartsSection) {
+            chartsSection.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">No detailed statistics available for Greenland. Please refer to Denmark data.</div>';
+        }
+        
+        modal.style.display = 'flex';
+        return; // Exit early for Greenland
+    }
 
     const eco = economyData[normalizedName] || economyData[nameUpper] || {};
     const demo = demographicsData[normalizedName] || demographicsData[nameUpper] || {};

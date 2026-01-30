@@ -362,6 +362,27 @@ if (typeof window !== 'undefined') {
         formatNumber,
         formatLargeNumber,
         parseNumericValue,
-        formatCountryName
+        formatCountryName,
+        isGreenland,
+        getGreenlandMessage
     };
+}
+
+/**
+ * Check if a country is Greenland (which is part of Denmark)
+ * @param {string} countryName - Country name to check
+ * @returns {boolean} - True if country is Greenland
+ */
+function isGreenland(countryName) {
+    if (!countryName) return false;
+    const name = String(countryName).toUpperCase().trim();
+    return name === 'GREENLAND' || name.includes('GREENLAND');
+}
+
+/**
+ * Get a message explaining Greenland's data situation
+ * @returns {string} - Explanation message
+ */
+function getGreenlandMessage() {
+    return 'Greenland is an autonomous territory of Denmark. As such, specific data for Greenland is not available separately in this dataset. Please refer to Denmark for relevant statistics.';
 }
