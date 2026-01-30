@@ -237,8 +237,8 @@ function drawCharts(feature, economyData, demographicsData, commData, energyData
     const medianAge = parseFloat(demo.Median_Age) || 0;
 
     const barData = [
-        { label: "Birth Rate", value: birthRate, max: 40, format: v => `${v.toFixed(1)}/1k` },
-        { label: "Death Rate", value: deathRate, max: 20, format: v => `${v.toFixed(1)}/1k` },
+        { label: "Birth Rate", value: birthRate, max: 40, format: v => `${v.toFixed(1)} /1k` },
+        { label: "Death Rate", value: deathRate, max: 20, format: v => `${v.toFixed(1)} /1k` },
         { label: "Median Age", value: medianAge, max: 50, format: v => `${v.toFixed(0)} yrs` }
     ];
 

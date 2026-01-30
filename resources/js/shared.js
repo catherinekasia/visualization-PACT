@@ -1,5 +1,5 @@
 // shared.js - Common utilities and data shared across all pages
-// This module consolidates duplicate code from data.js, explore.js, and dataLoader.js
+// This module consolidates duplicate functions etc from data.js, map.js, explore.js, and dataLoader.js
 
 // =====================================================================
 // ALLOWED COUNTRIES LIST

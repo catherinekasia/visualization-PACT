@@ -113,18 +113,30 @@ function drawBarChart(selector, data) {
         .attr("rx", 4)
         .style("fill", (d, i) => colors[i % colors.length]);
 
-    // Labels at bottom
+    // Labels at bottom - split into multiple lines for better spacing
     svg.selectAll(".label")
         .data(data)
         .enter()
         .append("text")
         .attr("class", "chart-axis")
         .attr("x", d => x(d.label) + x.bandwidth() / 2)
-        .attr("y", chartHeight + 18)
+        .attr("y", chartHeight + 15)
         .attr("text-anchor", "middle")
-        .style("font-size", "10px")
+        .style("font-size", "9px")
         .style("fill", (d, i) => colors[i % colors.length])
-        .text(d => d.label);
+        .each(function(d) {
+            const words = d.label.split(' ');
+            const text = d3.select(this);
+            text.text(''); // Clear the text
+            
+            // Add each word on a new line
+            words.forEach((word, i) => {
+                text.append("tspan")
+                    .attr("x", x(d.label) + x.bandwidth() / 2)
+                    .attr("dy", i === 0 ? 0 : "1.1em")
+                    .text(word);
+            });
+        });
 
     // Values above bars
     svg.selectAll(".value")
