@@ -7,9 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 
   <style>
-    /* ==========================================
-       COUNTRY SELECTOR STYLES
-       ========================================== */
+       /* Styles the country selector list items and interactive states */
     .country-item {
       padding: 6px 10px;
       cursor: pointer;
@@ -43,9 +41,7 @@
       display: block;
     }
 
-    /* ==========================================
-       SEARCH INPUT
-       ========================================== */
+    /* Styles the country search input */
     #country-search {
       width: 100%;
       padding: 10px 12px;
@@ -65,9 +61,7 @@
       color: #64748b;
     }
 
-    /* ==========================================
-       COUNTRY LIST SCROLLBAR
-       ========================================== */
+    /* Constrains the country list scrollbar */
     #country-list {
       max-height: 250px;
       overflow-y: auto;
@@ -89,9 +83,7 @@
       background: #64748b;
     }
 
-    /* ==========================================
-       SELECTED TAGS
-       ========================================== */
+    /* Styles selected tags */
     .selected-tag {
       display: inline-flex;
       align-items: center;
@@ -133,18 +125,14 @@
       color: #0ea5e9;
     }
 
-    /* ==========================================
-       SECTION DIVIDERS
-       ========================================== */
+    /* Provide spacing separation*/
     .section-divider {
       margin-top: 16px;
       padding-top: 16px;
       border-top: 1px solid #334155;
     }
 
-    /* ==========================================
-       COMPACT ATTRIBUTE GROUPS
-       ========================================== */
+    /* Enables a compact attribute list presentation */
     .attributes-scroll.compact {
       max-height: 200px !important;
     }
@@ -162,9 +150,7 @@
       font-size: 12px;
     }
 
-    /* ==========================================
-       LAYOUT - Clean Two-Column Design
-       ========================================== */
+    /* Defines a two-panel layout for selectors and results */
     .map-section-modern {
       min-height: 100vh;
       overflow: visible;
@@ -188,9 +174,7 @@
       padding: 20px;
     }
 
-    /* ==========================
-   TOP NAV (Compare / Weights)
-   ========================== */
+    /* Styles the top mode switch and its active state */
     .results-topnav{
       display:flex;
       gap:10px;
@@ -234,9 +218,7 @@
       background: rgba(23, 33, 47, 0.5);
     }
 
-    /* ==========================================
-       RESULTS HEADER - ULTRA COMPACT
-       ========================================== */
+    /* Results header */
     .results-header {
       background: rgba(15, 23, 42, 0.85);
       border: 1px solid rgba(148, 163, 184, 0.2);
@@ -290,9 +272,7 @@
       flex-shrink: 0;
     }
 
-    /* ==========================================
-       VISUALIZATIONS CONTAINER
-       ========================================== */
+    /* Defines the container for rendered charts  */
     #visualizations-container {
       display: flex;
       flex-direction: column;
@@ -307,9 +287,7 @@
     }
 
 
-    /* ==========================================
-       CHART CARDS
-       ========================================== */
+    /* Styles chart cards */
     .chart-card {
       background: rgba(15, 23, 42, 0.8);
       border: 1px solid rgba(148, 163, 184, 0.25);
@@ -344,9 +322,7 @@
       border-bottom: 2px solid rgba(56, 189, 248, 0.2);
     }
 
-    /* ==========================================
-       CHART WRAPPER - Horizontal Scroll
-       ========================================== */
+    /* Chart wrapper - Horizontal Scroll */
     .chart-wrapper {
       overflow-x: auto;
       overflow-y: visible;
@@ -372,59 +348,44 @@
       background: rgba(100, 116, 139, 0.9);
     }
 
-    /* ==========================================
-       SVG CHART SIZING
-       ========================================== */
+    /* Establishes default SVG sizing */
     .chart-card svg {
       display: block;
       min-width: 600px;
     }
-
-    /* ==========================================
-       MULTI-LINE TEXT IN CHARTS
-       Critical: Forces attribute labels to wrap
-       ========================================== */
     
-    /* Attribute labels in grouped bar chart */
     .chart-card text.attr-label tspan {
       font-size: 10px !important;
       fill: #94a3b8;
     }
 
-    /* Parallel coordinates labels */
     .chart-card text tspan {
       font-size: 10px !important;
     }
 
-    /* All axis text */
     .chart-card .axis text,
     .chart-card g.axis text {
       font-size: 10px !important;
       fill: #94a3b8;
     }
 
-    /* Legend text */
     .chart-card .legend text {
       font-size: 11px !important;
       fill: #e2e8f0;
     }
 
-    /* Value labels */
     .chart-card text.value {
       font-size: 11px !important;
       fill: #e2e8f0;
       font-weight: 600;
     }
 
-    /* Country names */
     .chart-card text.country {
       font-size: 11px !important;
       fill: #94a3b8;
     }
 
-    /* ==========================================
-       LOADING STATE
-       ========================================== */
+    /* Styles the shared loading and tooltip components */
     .loading {
       text-align: center;
       color: #94a3b8;
@@ -432,9 +393,6 @@
       font-size: 14px;
     }
 
-    /* ==========================================
-       TOOLTIP (for interactive charts)
-       ========================================== */
     #tooltip {
       position: fixed;
       display: none;
@@ -451,9 +409,7 @@
       max-width: 280px;
     }
 
-    /* ==========================================
-       RESPONSIVE DESIGN
-       ========================================== */
+    /* Provides resposive layout */
     @media (max-width: 1024px) {
       .explorer-container {
         flex-direction: column;
@@ -479,6 +435,7 @@
       }
     }
 
+    /* Enforces a compact vertical layout*/
     .results-panel{
       display: block !important;
     }
@@ -502,14 +459,10 @@
 </head>
 
 <body class="page-data">
-  <!-- Tooltip element -->
   <div id="tooltip"></div>
 
   <div class="centered-bg">
     <div class="main-layout">
-      <!-- ==========================================
-           SIDEBAR NAVIGATION
-           ========================================== -->
       <aside class="sidebar-nav">
         <nav class="nav-list">
           <a class="nav-item" href="index.html" title="Map">
@@ -553,18 +506,12 @@
         </nav>
       </aside>
 
-      <!-- ==========================================
-           MAIN CONTENT AREA
-           ========================================== -->
       <section class="map-section-modern">
         <div class="explorer-container">
 
-          <!-- ==========================================
-               LEFT PANEL: SELECTION
-               ========================================== -->
           <div class="attributes-panel">
             
-            <!-- Visa Filter -->
+  
             <div style="margin-bottom:16px;">
               <label style="display:block; font-size:0.85em; color:#94a3b8; margin-bottom:6px; font-weight:500;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;">
@@ -579,7 +526,6 @@
               </select>
             </div>
             
-            <!-- Country Selection -->
             <div class="section-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
                 <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>
@@ -598,7 +544,6 @@
               </div>
             </div>
 
-            <!-- Attribute Selection -->
             <div class="section-divider">
               <div class="section-title" style="font-size:0.95em; margin-bottom:8px;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
@@ -609,8 +554,7 @@
               </div>
 
               <div class="selected-tags" id="selected-tags" style="margin-bottom:8px;"></div>
-              
-              <!-- Attribute Search -->
+            
               <input type="text" 
                 id="attribute-search" 
                 placeholder="Search attributes..." 
@@ -676,7 +620,6 @@
               </div>
             </div>
 
-            <!-- Action Buttons -->
             <button class="find-button" id="compare-countries" disabled style="margin-top:12px;">
               COMPARE COUNTRIES
             </button>
@@ -688,16 +631,12 @@
             </button>
           </div>
 
-          <!-- ==========================================
-               RIGHT PANEL: RESULTS
-               ========================================== -->
           <div class="results-panel">
             <div class="results-topnav" id="results-topnav">
               <button class="mode-btn active" id="mode-compare-btn">Compare countries</button>
               <button class="mode-btn" id="mode-weights-btn">Choose importance of attributes</button>
             </div>
             
-            <!-- Results Header - Shows compared countries -->
             <div class="results-header" id="results-header">
               <h2>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
@@ -708,7 +647,6 @@
               <div class="compared-countries-list" id="compared-countries-list"></div>
             </div>
 
-            <!-- Visualizations Container -->
             <div id="visualizations-container">
               <div class="loading">
                 Select countries and attributes, then click "Compare Countries" to see visualizations
@@ -722,14 +660,13 @@
     </div>
   </div>
 
-  <!-- ==========================================
-       JAVASCRIPT LIBRARIES
-       ========================================== -->
+    <!-- Loads third-party libraries and application scripts required for parsing and chart rendering. -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="js/neutralino.js"></script>
   <script src="js/d3.v7.min.js"></script>
   <script src="js/shared.js"></script>
-  <script src="data-config.js"></script>
-  <script src="data.js"></script>
+  <script src="js/data-config.js"></script>
+  <script src="js/data.js"></script>
+
 </body>
 </html>
