@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
             demographicsData: {},
             commData: {},
             energyData: {},
-            transData: {},
             goodCountryData: {},
             earningPotentialData: {},
             safetyData: {},
@@ -107,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         appState.demographicsData = attributeData.demographicsData;
                         appState.commData = attributeData.commData;
                         appState.energyData = attributeData.energyData;
-                        appState.transData = attributeData.transData;
                         appState.goodCountryData = attributeData.goodCountryData;
                         appState.earningPotentialData = attributeData.earningPotentialData;
                         appState.safetyData = attributeData.safetyData;

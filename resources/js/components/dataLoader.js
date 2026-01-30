@@ -4,17 +4,16 @@ function loadAttributeData(callback) {
     // Return a Promise so callers can `await` or use callbacks for backward-compatibility
     const DATA_PATHS = window.SharedUtils.DATA_PATHS;
     const p = Promise.all([
-        Neutralino.filesystem.readFile(DATA_PATHS.economy).then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile(DATA_PATHS.demographics).then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile(DATA_PATHS.communications).then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile(DATA_PATHS.energy).then(data => d3.csvParse(data)),
-        Neutralino.filesystem.readFile(DATA_PATHS.transportation).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.filtered.economy).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.filtered.demographics).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.filtered.communications).then(data => d3.csvParse(data)),
+        Neutralino.filesystem.readFile(DATA_PATHS.filtered.energy).then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile(DATA_PATHS.indexes.goodCountry).then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile(DATA_PATHS.indexes.earningPotential).then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile(DATA_PATHS.indexes.safety).then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile(DATA_PATHS.indexes.health).then(data => d3.csvParse(data)),
         Neutralino.filesystem.readFile(DATA_PATHS.visaInfo).then(data => d3.csvParse(data))
-    ]).then(([economy, demographics, communications, energy, transportation, goodCountryIndex, earningPotentialIndex, safetyIndex, healthIndex, visaInfo]) => {
+    ]).then(([economy, demographics, communications, energy, goodCountryIndex, earningPotentialIndex, safetyIndex, healthIndex, visaInfo]) => {
         const economyData = {};
         economy.forEach(d => {
             economyData[d.Country.toUpperCase()] = d;
@@ -33,11 +32,6 @@ function loadAttributeData(callback) {
         const energyData = {};
         energy.forEach(d => {
             energyData[d.Country.toUpperCase()] = d;
-        });
-
-        const transData = {};
-        transportation.forEach(d => {
-            transData[d.Country.toUpperCase()] = d;
         });
 
         const goodCountryData = {};
@@ -71,12 +65,12 @@ function loadAttributeData(callback) {
         });
 
         console.log('Attribute data loaded');
-        const result = { economyData, demographicsData, commData, energyData, transData, goodCountryData, earningPotentialData, safetyData, healthData, visaData };
+        const result = { economyData, demographicsData, commData, energyData, goodCountryData, earningPotentialData, safetyData, healthData, visaData };
         if (typeof callback === 'function') callback(null, result);
         return result;
     }).catch(err => {
         console.error('Error loading attribute data:', err);
-        try { Neutralino.os.showMessageBox('Warning', 'Failed to load some attribute data. The map will still work, but details may be missing.', 'WARNING'); } catch(e){}
+        try { Neutralino.os.showMessageBox('Warning', 'Failed to load some attribute data. The map will still work, but details may be missing.', 'OK'); } catch(e){}
         if (typeof callback === 'function') callback(err);
         throw err;
     });
@@ -94,7 +88,7 @@ function loadMapData(callback) {
         })
         .catch(err => {
             console.error('Error loading map data:', err);
-            Neutralino.os.showMessageBox('Error', 'Failed to load map data: ' + err.message, 'ERROR');
+            Neutralino.os.showMessageBox('Error', 'Failed to load map data: ' + err.message, 'OK');
             callback(err);
         });
 }

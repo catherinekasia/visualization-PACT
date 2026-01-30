@@ -184,24 +184,20 @@ function getRegionColor(region) {
 // Central location for all data file paths
 // =====================================================================
 const DATA_PATHS = {
-    // Main data directory (unfiltered)
-    economy: 'data/economy_data.csv',
-    demographics: 'data/demographics_data.csv',
-    communications: 'data/communications_data.csv',
-    energy: 'data/energy_data.csv',
-    transportation: 'data/transportation_data.csv',
-    geography: 'data/geography_data.csv',
-    government: 'data/government_and_civics_data.csv',
+    // Main data paths (point to filtered CIA data - these are the actual files that exist)
+    economy: 'data/filtered_cia_data/economy_data.csv',
+    demographics: 'data/filtered_cia_data/demographics_data.csv',
+    communications: 'data/filtered_cia_data/communications_data.csv',
+    energy: 'data/filtered_cia_data/energy_data.csv',
+    government: 'data/filtered_cia_data/government_and_civics_data.csv',
     
-    // Filtered CIA data
+    // Filtered CIA data (same as main paths for consistency)
     filtered: {
         economy: 'data/filtered_cia_data/economy_data.csv',
         demographics: 'data/filtered_cia_data/demographics_data.csv',
         communications: 'data/filtered_cia_data/communications_data.csv',
         energy: 'data/filtered_cia_data/energy_data.csv',
-        geography: 'data/filtered_cia_data/geography_data.csv',
-        government: 'data/filtered_cia_data/government_and_civics_data.csv',
-        transportation: 'data/filtered_cia_data/transportation_data.csv'
+        government: 'data/filtered_cia_data/government_and_civics_data.csv'
     },
     
     // Indexes
@@ -219,7 +215,7 @@ const DATA_PATHS = {
     crime: 'data/filtered_cia_data/criminal_index.csv',
     terrorism: 'data/filtered_cia_data/global_terrorism_index.csv',
     healthcare: 'data/filtered_cia_data/heathcare_index_data.csv',
-    inflation: 'data/filtered_cia_data/global_inflation_data.csv',
+    inflation: 'data/filtered_cia_data/global_inflation_data.fixed.fixed.csv',
     lifeExpectancy: 'data/filtered_cia_data/life_expectancy.csv',
     
     // Map data
