@@ -69,7 +69,6 @@ peace = peace[["country_key", "Country", "peace_index", "Change"]].rename(
 )
 
 terror = terror.rename(columns={c: c.strip() for c in terror.columns})
-# If your terror file uses "country" (lowercase), change "Country" to "country" here
 terror["country_key"] = terror["Country"].map(canon_country)
 terror = terror[["country_key", "Country", "terrorism_index", "rank_change"]].rename(
     columns={"Country": "country_terror", "rank_change": "terror_rank_change"}
@@ -100,10 +99,10 @@ crime = crime[
     }
 )
 
-# Merge
+# Merge (outer keeps any country in any dataset)
 df = crime.merge(peace, on="country_key", how="outer").merge(terror, on="country_key", how="outer")
 
-# Choose a display name
+# Stating the display country name (prefer crime, then peace, then terror)
 df["Country"] = (
     df["country_crime"]
     .combine_first(df["country_peace"])
@@ -111,7 +110,7 @@ df["Country"] = (
     .combine_first(df["country_key"])
 )
 
-# ---------- Build SAFE scores (0..1, higher=safer) ----------
+
 # Terrorism: higher=worse -> invert
 df["terror_safe"] = minmax_high_is_worse_to_safe(df["terrorism_index"])
 
@@ -121,11 +120,12 @@ df["peace_safe"] = minmax_high_is_worse_to_safe(df["peace_index"])
 # Criminality: higher=worse -> invert
 df["crime_safe"] = minmax_high_is_worse_to_safe(df["criminality_2025"])
 
-# ---------- Risk-focused Type A weights ----------
+# Risk-focused weights formula
 weights = {"crime_safe": 0.40, "terror_safe": 0.40, "peace_safe": 0.20}
 
 df["safety_index_risk_focused"] = 100 * weighted_mean_rowwise(df, weights, renormalize_missing=True)
 
+#Output
 out_cols = [
     "Country",
     "criminality_2025",
