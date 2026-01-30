@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ramp: "reds"
       },
       safety: {
-        title: "Safety Index (Risk)",
+        title: "Safety Index",
         path: DATA_PATHS.indexes.safety,
         ramp: "oranges"
       },
@@ -281,15 +281,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const minV = d3.min(values);
       const maxV = d3.max(values);
 
-      console.log(` ${title} - min: ${minV?.toFixed(2)}, max: ${maxV?.toFixed(2)}`);
-
       const interp = getInterpolator(currentRamp);
 
-      // Create color scale mapping data values to colors
+      // Global Peace: lower value = better → reverse the scale
+      const isMinBetter = title.includes("Global Peace");
+
       const color = d3.scaleSequential()
-        .domain([minV, maxV])
+        .domain(isMinBetter ? [maxV, minV] : [minV, maxV])
         .interpolator(interp)
-        .clamp(true); // Clamp ensures values outside domain don't produce invalid colors
+        .clamp(true);
+
+
 
       // Create D3 tooltip for hover interactions
       const tooltip = d3.select("body")
@@ -412,7 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const valueCol = detectValueColumn(rows);
               if (!valueCol) throw new Error("No numeric column found");
 
-              console.log(`✅ Using column: ${valueCol}`);
+              console.log(`Using column: ${valueCol}`);
               // Cache processed data for faster subsequent loads
               cache.set(key, {
                 title: cfg.title,
