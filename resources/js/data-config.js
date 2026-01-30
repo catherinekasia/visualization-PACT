@@ -7,7 +7,7 @@ window.ATTRIBUTES = {
     EconomicStability_E:        { label: "Economic Stability Index",    better: "max" },
     good_country_index:         { label: "Good Country Index",          better: "max" },
     health_index:               { label: "Health Index",                better: "max" },
-    safety_index_risk_focused:  { label: "Risk Index (Unsafety)",       better: "max" },
+    safety_index_risk_focused:  { label: "Safety Index",                  better: "max" },
   },
 
   demographics: {
