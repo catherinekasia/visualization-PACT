@@ -6,9 +6,9 @@ Austria,84.45,82.12,79.75
 Belarus,79.22,74.62,69.74
 Belgium,84.45,82.27,80.06
 Bosnia and Herzegovina,81.07,78.04,74.65
-Bulgaria,79.36,75.8,72.33
-Cabo Verde,79.37,76.22,73.05
+Bulgaria,79.37,76.22,73.05
 Canada,84.91,82.72,80.53
+Croatia,81.65,78.97,76.12
 Czech Republic (Czechia),82.75,79.97,77.18
 Denmark,83.98,82.09,80.21
 Estonia,83.17,79.31,75.12
@@ -26,6 +26,7 @@ Japan,87.88,84.85,81.83
 Kosovo,81.02,78.88,76.55
 "Korea, South",87.3,84.4,81.3
 Latvia,80.6,76.33,71.75
+LIechtenshtein,83.6,81.2,78.8
 Lithuania,80.8,76.17,71.42
 Luxembourg,83.94,82.36,80.75
 Malta,85.39,83.47,81.48
@@ -35,7 +36,6 @@ Monaco,88.6, 86.5, 84.6
 Montenegro,80.45,77.25,73.92
 Netherlands,83.85,82.3,80.72
 New Zealand,83.89,82.25,80.6
-North Korea,75.88,73.74,71.55
 North Macedonia,79.71,77.54,75.26
 Norway,84.97,83.46,81.94
 Poland,82.49,78.81,75.1
