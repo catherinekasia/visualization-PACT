@@ -47,33 +47,47 @@ document.addEventListener("DOMContentLoaded", () => {
      * Each index includes:
      * - title: Display name for the index
      * - path: File path to the CSV data
-     * - ramp: Color scheme name for the choropleth (blues, purples, reds, oranges, greens)
+     * - ramp: Color scheme name for the choropleth
+     * - valueCol: Exact column name containing the index value
+     * - scale: Multiplier to convert to 0-100 range (default 1)
      */
     const INDEXES = {
-      gpi: {
-        title: "Global Peace Index",
-        path: DATA_PATHS.peace,
-        ramp: "blues"
+      dpi: {
+        title: "Demographic Pressure Index",
+        path: DATA_PATHS.indexes.dpi,
+        ramp: "blues",
+        valueCol: "DPI_R"
       },
-      crime: {
-        title: "Criminal Index",
-        path: DATA_PATHS.crime,
-        ramp: "purples"
+      earningPotential: {
+        title: "Earning Potential Index",
+        path: DATA_PATHS.indexes.earningPotential,
+        ramp: "purples",
+        valueCol: "EPI_future"
       },
-      gti: {
-        title: "Global Terrorism Index",
-        path: DATA_PATHS.terrorism,
-        ramp: "reds"
+      economicStability: {
+        title: "Economic Stability Index",
+        path: DATA_PATHS.indexes.economicStability,
+        ramp: "teals",
+        valueCol: "EconomicStability_E",
+        scale: 100
+      },
+      goodCountry: {
+        title: "Good Country Index",
+        path: DATA_PATHS.indexes.goodCountry,
+        ramp: "oranges",
+        valueCol: "good_country_index"
+      },
+      health: {
+        title: "Health Index",
+        path: DATA_PATHS.indexes.health,
+        ramp: "greens",
+        valueCol: "health_index"
       },
       safety: {
         title: "Safety Index",
         path: DATA_PATHS.indexes.safety,
-        ramp: "oranges"
-      },
-      health: {
-        title: "Own Health Index",
-        path: DATA_PATHS.indexes.health,
-        ramp: "greens"
+        ramp: "reds",
+        valueCol: "safety_index_risk_focused"
       }
     };
 
@@ -124,9 +138,10 @@ document.addEventListener("DOMContentLoaded", () => {
      * 
      * @param {Array<Object>} rows - CSV data rows
      * @param {string} valueCol - Name of the column containing numeric values
+     * @param {number} scale - Multiplier to apply to values (default 1)
      * @returns {Map<string, number>} Map of normalized country names to values
      */
-    function buildCountryValueMap(rows, valueCol) {
+    function buildCountryValueMap(rows, valueCol, scale = 1) {
       const m = new Map();
       for (const r of rows) {
         // Try multiple possible country column names
@@ -135,7 +150,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const v = +r[valueCol];
         if (Number.isNaN(v)) continue;
         // Store with normalized country name for consistent matching
-        m.set(normalizeCountryName(name), v);
+        // Apply scale factor (e.g., 100 for values in 0-1 range)
+        m.set(normalizeCountryName(name), v * scale);
       }
       console.log(`Built map for ${valueCol}: ${m.size} countries`);
       return m;
@@ -216,21 +232,42 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /**
-     * Returns the D3 color interpolator function for a given color ramp name.
-     * Provides colorblind-safe color schemes for different index types.
+     * Returns a high-contrast color interpolator for a given color ramp name.
+     * Uses 9 color stops for smoother gradients with more visible differences.
      * 
-     * @param {string} rampName - Name of the color ramp (reds, oranges, greens, blues, purples)
-     * @returns {Function} D3 color interpolator function
+     * @param {string} rampName - Name of the color ramp
+     * @returns {Function} Color interpolator function (t: 0-1) => color string
      */
     function getInterpolator(rampName) {
-      switch ((rampName || "").toLowerCase()) {
-        case "reds": return d3.interpolateReds;
-        case "oranges": return d3.interpolateOranges;
-        case "greens": return d3.interpolateGreens;
-        case "blues": return d3.interpolateBlues;
-        case "purples": return d3.interpolatePurples;
-        default: return d3.interpolateViridis; // very colorblind-safe fallback
-      }
+      // High-contrast palettes with 9 stops for better differentiation
+      const palettes = {
+        blues:   ['#0d1117', '#1a2744', '#264673', '#3366a5', '#4d8ad9', '#6aa3e8', '#8fbdf2', '#b4d6fa', '#dceeff'],
+        purples: ['#0d0d17', '#231744', '#3d2373', '#5a30a5', '#7840d9', '#9560e8', '#b080f2', '#cba0fa', '#e6c0ff'],
+        teals:   ['#0d1714', '#173d33', '#206655', '#2a9178', '#35c09e', '#52d4b4', '#75e3c8', '#9ff0db', '#c8faee'],
+        oranges: ['#170d0a', '#442517', '#734020', '#a55d2a', '#d97e35', '#e89a52', '#f2b575', '#fad09f', '#ffeac8'],
+        greens:  ['#0d170d', '#174417', '#206620', '#2a912a', '#35c035', '#52d452', '#75e375', '#9ff09f', '#c8fac8'],
+        reds:    ['#170d0d', '#441717', '#732020', '#a52a2a', '#d93535', '#e85252', '#f27575', '#fa9f9f', '#ffc8c8']
+      };
+      
+      const palette = palettes[(rampName || '').toLowerCase()] || palettes.blues;
+      
+      // Return interpolator function
+      return function(t) {
+        // Clamp t to [0, 1]
+        t = Math.max(0, Math.min(1, t));
+        // Map t to palette index
+        const idx = t * (palette.length - 1);
+        const lower = Math.floor(idx);
+        const upper = Math.ceil(idx);
+        const frac = idx - lower;
+        
+        if (lower === upper) return palette[lower];
+        
+        // Interpolate between two colors using LAB for perceptual smoothness
+        const c1 = d3.color(palette[lower]);
+        const c2 = d3.color(palette[upper]);
+        return d3.interpolateLab(c1, c2)(frac);
+      };
     }
 
     /**
@@ -276,18 +313,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const projection = d3.geoNaturalEarth1().fitSize([W, H], geojson);
       const path = d3.geoPath(projection);
 
-      // Calculate domain for color scale
-      const values = Array.from(countryToValue.values());
-      const minV = d3.min(values);
-      const maxV = d3.max(values);
+      // Calculate the actual data range for better color differentiation
+      const values = Array.from(countryToValue.values()).filter(v => !isNaN(v));
+      const minV = d3.min(values) || 0;
+      const maxV = d3.max(values) || 100;
+      
+      // Add padding to the range for better visual spread
+      const range = maxV - minV;
+      const paddedMin = Math.max(0, minV - range * 0.05);
+      const paddedMax = Math.min(100, maxV + range * 0.05);
 
       const interp = getInterpolator(currentRamp);
 
-      // Global Peace: lower value = better → reverse the scale
-      const isMinBetter = title.includes("Global Peace");
-
+      // Use actual data range for coloring (makes differences more visible)
       const color = d3.scaleSequential()
-        .domain(isMinBetter ? [maxV, minV] : [minV, maxV])
+        .domain([paddedMin, paddedMax])
         .interpolator(interp)
         .clamp(true);
 
@@ -359,13 +399,13 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
 
-      // Add text label showing index name and value range
+      // Add text label showing index name and actual data range
       svg.append("text")
         .attr("x", 12)
         .attr("y", H - 12)
         .attr("fill", "#94a3b8")
         .attr("font-size", 11)
-        .text(`${title} | Range: ${minV?.toFixed?.(2) ?? "?"} → ${maxV?.toFixed?.(2) ?? "?"}`);
+        .text(`${title} | Range: ${minV.toFixed(1)} → ${maxV.toFixed(1)}`);
     }
 
     // Cache for loaded index data to avoid re-reading files
@@ -411,15 +451,17 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!cache.has(key)) {
               console.log(` Loading ${cfg.title}`);
               const rows = await readCSV(cfg.path);
-              const valueCol = detectValueColumn(rows);
+              // Use explicit valueCol from config, or detect automatically
+              const valueCol = cfg.valueCol || detectValueColumn(rows);
               if (!valueCol) throw new Error("No numeric column found");
 
               console.log(`Using column: ${valueCol}`);
               // Cache processed data for faster subsequent loads
+              // Apply scale factor if specified (e.g., 100 for 0-1 values)
               cache.set(key, {
                 title: cfg.title,
                 valueCol,
-                map: buildCountryValueMap(rows, valueCol)
+                map: buildCountryValueMap(rows, valueCol, cfg.scale || 1)
               });
             }
 
@@ -433,8 +475,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       });
 
-      // Automatically load the Global Peace Index as the default view
-      const first = document.querySelector("#index-tabs .map-btn[data-key='gpi']");
+      // Automatically load DPI as the default view
+      const first = document.querySelector("#index-tabs .map-btn[data-key='dpi']");
       if (first) first.click();
     });
   });
