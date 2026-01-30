@@ -22,10 +22,6 @@ neu update
 neu run
 ```
 
-Additional libraries used:
-
-https://github.com/datasets/geo-countries
-
 ---
 
 ## Project Overview
