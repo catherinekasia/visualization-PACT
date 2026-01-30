@@ -116,7 +116,7 @@ name_map = (
 )
 df["Country"] = df["key"].map(name_map).fillna(df["key"])
 
-# ---------------- Option 3 calculation ----------------
+# Calculation of the actual Good Country Index, step by step 
 # QoL = 0.55*Safety + 0.45*Health
 df["qol_index"] = weighted_mean_rowwise(
     df.rename(columns={
@@ -135,7 +135,7 @@ df["opportunity_index"] = weighted_mean_rowwise(
     {"econ": 0.55, "earn": 0.45}
 )
 
-# GoodCountry = 0.60*QoL + 0.40*Opportunity
+# GoodCountry = 0.60*QoL + 0.40*Opportunity (the formula itself)
 df["good_country_index"] = weighted_mean_rowwise(
     df, {"qol_index": 0.60, "opportunity_index": 0.40}
 )
