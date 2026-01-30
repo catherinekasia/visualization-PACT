@@ -34,21 +34,36 @@ PACT (Political and Country Trends) is a desktop visualization application built
 
 ### 🗺️ Map View (`index.html`)
 - Interactive world map visualization using D3.js and GeoJSON
-- Click on countries to view detailed statistics popup
+- Click on countries to view detailed statistics popup with:
+  - Demographics, economy, and quality of life indexes
+  - **Work visa & permit information** with requirements and costs
+  - Interactive charts (radar and bar charts)
 - Region-based filtering and highlighting
 
-### 📊 Data View (`data.html`) - Country Finder
-- Multi-attribute filtering and ranking system
-- Select criteria to find countries matching your requirements
-- Displays Top 5 matching countries with score breakdowns
-- Visual charts for score comparison
+### 📊 Data View (`data.html`) - Country Comparison Tool
+- **Visa/region filtering** (All Countries, EU/EEA/Schengen, English-Speaking)
+- Multi-country selection (up to 5 countries)
+- Multi-attribute selection (up to 10 attributes) with:
+  - **Search functionality** to find attributes quickly
+  - **Group selection buttons** (All/Clear) for each category
+- Compare mode: Side-by-side country comparison with charts
+- Weights mode: Customize attribute importance for scoring
+- **Selection caching** - Your selections persist across page refreshes
+- Visual charts for data comparison
 
 ### 🔍 Explore View (`explore.html`)
 - Parallel Coordinates Plot (PCP) for multi-dimensional data exploration
 - Interactive scatter plot visualization
+- **Visa/region filtering** (All Countries, EU/EEA/Schengen, English-Speaking)
 - Region-based color coding with 7 distinct regions
 - Interactive legend with click/hover filtering
 - Dynamic attribute selection via dropdowns
+
+### 📈 Indexes View (`indexes.html`)
+- Choropleth maps for various country indexes
+- Global Peace Index, Crime Index, Terrorism Index
+- Safety, Health, and composite indexes
+- Interactive map navigation with color-coded values
 
 ### ⚙️ Settings View (`settings.html`)
 - Application configuration options
@@ -76,6 +91,7 @@ visualization-PACT/
 │   ├── transportation_data.csv
 │   ├── geography_data.csv
 │   ├── government_and_civics_data.csv
+│   ├── visa_info.csv            # Work visa & permit information
 │   │
 │   └── filtered_cia_data/        # Cleaned/filtered data
 │       ├── economy_data.csv
@@ -102,14 +118,14 @@ visualization-PACT/
 │
 ├── resources/                    # Application source files
 │   ├── index.html               # Map View (main page)
-│   ├── data.html                # Data/Country Finder View
+│   ├── data.html                # Data/Country Comparison View
 │   ├── explore.html             # Explore View (PCP + scatter)
+│   ├── indexes.html             # Indexes View (choropleth maps)
 │   ├── settings.html            # Settings page
-│   ├── threejs.html             # 3D visualization (experimental)
 │   │
 │   ├── styles.css               # Global styles for all pages
 │   ├── data-config.js           # Attribute definitions for Data View
-│   ├── data.js                  # Data View logic (Country Finder)
+│   ├── data.js                  # Data View logic (Country Comparison)
 │   ├── countries.geojson        # World map boundaries
 │   │
 │   ├── icons/                   # Icon assets
@@ -125,8 +141,8 @@ visualization-PACT/
 │       │
 │       └── components/          # Reusable UI components
 │           ├── map.js           # Map rendering & interaction
-│           ├── popup.js         # Country detail popup modal
-│           ├── charts.js        # Radar chart & visualizations
+│           ├── popup.js         # Country detail popup modal with visa info
+│           ├── charts.js        # Radar & bar chart visualizations
 │           ├── dataLoader.js    # CSV data loading utilities
 │           └── utils.js         # Formatting utilities
 │
@@ -144,8 +160,9 @@ visualization-PACT/
 | File | Purpose |
 |------|---------|
 | `index.html` | Main map visualization page |
-| `data.html` | Country finder/analysis tool |
-| `explore.html` | Multi-dimensional data exploration |
+| `data.html` | Country comparison tool with filtering & caching |
+| `explore.html` | Multi-dimensional data exploration (PCP & scatter) |
+| `indexes.html` | Index-based choropleth map visualizations |
 | `settings.html` | App settings and preferences |
 
 ### JavaScript - Core Logic
@@ -153,7 +170,8 @@ visualization-PACT/
 |------|---------|---------|
 | `js/main.js` | Initializes map, loads data, handles interactions | `index.html` |
 | `js/explore.js` | Parallel coordinates, scatter plot, region colors | `explore.html` |
-| `data.js` | Country finder logic, scoring algorithm | `data.html` |
+| `js/indexes.js` | Index map rendering and interactions | `indexes.html` |
+| `data.js` | Country comparison logic with caching & filtering | `data.html` |
 | `data-config.js` | Attribute definitions (labels, keys, better direction) | `data.html` |
 | `js/shared.js` | ⭐ **Consolidated shared code** (see below) | All pages |
 
@@ -194,6 +212,7 @@ This file consolidates duplicate code that was previously scattered across multi
 | Economy | GDP, employment, inflation | `Real_GDP_per_Capita_USD`, `Unemployment_Rate_percent` |
 | Energy | Production & consumption | `Electricity_Production`, `Energy_Consumption` |
 | Communications | Internet, mobile usage | `internet_users_total`, `mobile_subscriptions` |
+| Visa Information | Work visas & permits | `Visa Name`, `Temporary/Permanent`, `Min. Education Level`, `Cost` |
 | Safety Index | Composite safety score | `safety_index_risk_focused` |
 | Health Index | Health metrics composite | `health_index`, `life_expectancy` |
 | Peace Index | Global Peace Index | `peace_index` |
@@ -221,13 +240,32 @@ The app divides countries into 7 regions with distinct colors:
 
 - **Framework**: [NeutralinoJS](https://neutralino.js.org/) - Lightweight desktop app
 - **Visualization**: [D3.js v7](https://d3js.org/) - Data-driven visualizations
-- **CSV Parsing**: [Papa Parse](https://www.papaparse.com/) (Data View) / D3 (others)
-- **Map Data**: [GeoJSON](https://github.com/datasets/geo-countries) GeoJSON country boundaries
+- **CSV Parsing**: Papa Parse (Data View) / D3 (other views)
+- **Map Data**: [GeoJSON](https://github.com/datasets/geo-countries) country boundaries
+- **Storage**: localStorage for user preference caching
+
+---
+
+## Key Features
+
+### Data Persistence
+- User selections (countries, attributes, filters) are saved to localStorage
+- Selections automatically restore on page reload
+- "Clear All Selections" button to reset cached data
+
+### Visa Information System
+- Comprehensive work visa database for all countries
+- Displays visa types (temporary/permanent)
+- Shows education requirements, sponsorship needs, and costs
+- Integrated into country popup modals
+
+### Advanced Filtering
+- Visa/region filters: All Countries, EU/EEA/Schengen, English-Speaking
+- Search functionality for finding specific attributes
+- Group selection for batch attribute selection
 
 ---
 
 ## License
 
 See [LICENSE](LICENSE) file for details.
-
-
