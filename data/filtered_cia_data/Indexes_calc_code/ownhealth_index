@@ -1,3 +1,4 @@
+from encodings.aliases import aliases
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -16,7 +17,10 @@ def canon_country(x: str) -> str:
     """
     if pd.isna(x):
         return np.nan
-    return str(x).strip().upper()
+    s = str(x).strip()
+    
+    aliases = { "Türkiye": "TURKEY (TURKIYE)", "LIechtenshtein": "LIECHTENSTEIN", "Turkey": "TURKEY (TURKIYE)", "United States of America": "UNITED STATES", "United States": "UNITED STATES", "United Kingdom": "UNITED KINGDOM", "Czech Republic": "CZECHIA", "Czech Republic (Czechia)": "CZECHIA", "Korea, DPR": "KOREA, NORTH", "Korea, Rep.": "KOREA, SOUTH", "Korea, Rep": "KOREA, SOUTH", "North Macedonia": "NORTH MACEDONIA", "Bosnia and Herzegovina": "BOSNIA AND HERZEGOVINA", "Hong Kong": "HONG KONG", "Taiwan": "TAIWAN", "DR Congo": "DEMOCRATIC REPUBLIC OF THE CONGO", "Congo, Dem. Rep.": "DEMOCRATIC REPUBLIC OF THE CONGO", }
+    return aliases.get(s, s).upper()
 
 def minmax_good(s: pd.Series) -> pd.Series:
     """Higher = better -> 0..1 (life expectancy, healthcare index)
@@ -91,7 +95,7 @@ df["Country"] = (
     df["country_demo"].combine_first(df["country_life"]).combine_first(df["country_hc"]).combine_first(df["key"])
 )
 
-# ------------------ Build 0..1 "good" scores ------------------
+# Build 0..1 "good" scores
 df["healthcare_good"] = minmax_good(df["healthcare_index"])          # higher better
 df["lifeexp_good"] = minmax_good(df["life_expectancy"])              # higher better
 df["infantmort_good"] = minmax_bad_to_good(df["infant_mortality"])   # higher worse -> invert
