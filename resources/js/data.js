@@ -1,12 +1,18 @@
 // data.js - Enhanced Country Comparison with Filtering & Multiple Chart Types
+
+// Initializee Neutralino framework for file system access
 Neutralino.init();
 console.log("data.js loaded - Country Comparison Mode!");
 
+// GLOBAL CONFIGURATION & STATE
+
+// 
 const ATTRIBUTES = window.ATTRIBUTES;
 if (!ATTRIBUTES) {
-  console.error("ATTRIBUTES is missing. Check that data-config.js loads before data.js");
+  console.error("ATTRIBUTES is missing.d Check that data-config.js loads before data.js");
 }
 
+// SAMPLE_DATA: 
 let SAMPLE_DATA = [];
 let selectedCountries = new Map();
 let selectedAttributes = new Map();
@@ -16,14 +22,14 @@ let LAST_EXTENTS_ALL = null;
 let activeVisaFilter = 'all';     // Tracks current visa filter
 let highlightedCountry = null;    // Tracks currently highlighted country on charts
 
-// LocalStorage keys for caching selections
+// LocalStorage keys for selection cashe
 const STORAGE_KEYS = {
   countries: 'dataPage_selectedCountries',
   attributes: 'dataPage_selectedAttributes',
   visaFilter: 'dataPage_visaFilter'
 };
 
-// Use shared utilities from shared.js (access via window.SharedUtils)
+// Use shared utilities from shared.js
 const DATA_FILES = [
   window.SharedUtils.DATA_PATHS.filtered.demographics,
   window.SharedUtils.DATA_PATHS.filtered.communications,
@@ -47,9 +53,7 @@ const COLORBLIND_PALETTE = [
   '#C385EF', // purple
 ];
 
-// ============================================================================
-// WEIGHTS MODE HELPERS (NEW)
-// ============================================================================
+// Collects all attribute definitions in a list
 
 function getAllAttributeDimsFlat() {
   const dims = [];
@@ -66,6 +70,7 @@ function getAllAttributeDimsFlat() {
   return dims;
 }
 
+// Computes pre-attribute min/max bounds across the dataset
 function computeAllExtents(dims) {
   const extents = {};
   for (const d of dims) {
@@ -84,6 +89,7 @@ function computeAllExtents(dims) {
   return extents;
 }
 
+// Normalizes a raw attribute into [0,1] interval
 function normalize01(raw, dim, extent) {
   if (!extent) return null;
   if (typeof raw !== "number" || Number.isNaN(raw)) return null;
@@ -95,6 +101,7 @@ function normalize01(raw, dim, extent) {
   return Math.max(0, Math.min(1, t));
 }
 
+// Extracts the current UI weight settings
 function getWeightsFromUI(dims, defaultW = 50) {
   const w = new Map();
   // sliders that exist in DOM
@@ -108,6 +115,7 @@ function getWeightsFromUI(dims, defaultW = 50) {
   return w;
 }
 
+// Produces a single weighted score 
 function weightedScoreForCountry(countryRow, dims, extents, weightsMap) {
   let sumW = 0;
   let sum = 0;
@@ -125,30 +133,28 @@ function weightedScoreForCountry(countryRow, dims, extents, weightsMap) {
   return sum / sumW; // 0..1
 }
 
+// Compute a baseline across all countries
 function weightedAverageProfile(dims, extents, weightsMap) {
   // weighted average over ALL allowed countries, attribute by attribute (normalized 0..1)
   const profile = {};
   for (const dim of dims) {
     const extent = extents[dim.key];
     if (!extent) { profile[dim.key] = null; continue; }
-
     const vals = SAMPLE_DATA
       .map(row => normalize01(row[dim.key], dim, extent))
       .filter(v => v !== null);
 
     if (!vals.length) { profile[dim.key] = null; continue; }
-
-    // average normalized value (0..1)
     const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
     profile[dim.key] = avg;
   }
   return profile;
 }
 
-// ============================================================================
-// LOCAL STORAGE FUNCTIONS
-// ============================================================================
 
+// LOCAL STORAGE FUNCTIONS
+
+// Auto-saving choices to the browser
 function saveSelectionsToStorage() {
   try {
     // Save selected countries (just the names)
@@ -172,6 +178,7 @@ function saveSelectionsToStorage() {
   }
 }
 
+// Restores selections from localStorage
 function loadSelectionsFromStorage() {
   try {
     // Load visa filter first
@@ -194,7 +201,7 @@ function loadSelectionsFromStorage() {
           selectedCountries.set(name, countryData);
         }
       });
-      console.log(`✅ Restored ${selectedCountries.size} countries from cache`);
+      console.log(`Restored ${selectedCountries.size} countries from cache`);
     }
     
     // Load selected attributes
@@ -210,7 +217,7 @@ function loadSelectionsFromStorage() {
           }
         }
       });
-      console.log(`✅ Restored ${selectedAttributes.size} attributes from cache`);
+      console.log(`Restored ${selectedAttributes.size} attributes from cache`);
     }
     
     return { hasCountries: selectedCountries.size > 0, hasAttributes: selectedAttributes.size > 0 };
@@ -220,6 +227,7 @@ function loadSelectionsFromStorage() {
   }
 }
 
+// Resets all selection in memory and storage
 function clearAllSelections() {
   // Clear in-memory selections
   selectedCountries.clear();
@@ -259,14 +267,13 @@ function clearAllSelections() {
   // Rebuild country selector with all filter
   initializeCountrySelector();
   
-  console.log('✅ All selections cleared');
+  console.log('All selections cleared');
 }
 
 
-// ============================================================================
 // DATA LOADING
-// ============================================================================
 
+// Read CSV file 
 async function loadCsv(path) {
   try {
     const content = await Neutralino.filesystem.readFile(path);
@@ -285,6 +292,7 @@ async function loadCsv(path) {
   }
 }
 
+// Load all datset and merge them by country 
 async function loadAllDataAndMerge() {
   try {
     console.log("Loading CSV files:", DATA_FILES);
@@ -312,11 +320,9 @@ async function loadAllDataAndMerge() {
             if (typeof v !== 'string') return v;
             const s = v.trim();
             if (s === '') return null;
-            // Percentage values like "37.3%"
             if (/^-?\d+(?:\.\d+)?%$/.test(s)) {
               return parseFloat(s.replace('%', ''));
             }
-            // Numeric with commas or spaces: "1,234" or "1 234"
             const num = Number(s.replace(/,/g, '').replace(/\s+/g, ''));
             if (!Number.isNaN(num)) return num;
             return s;
@@ -324,7 +330,6 @@ async function loadAllDataAndMerge() {
 
           const coerced = coerceValue(value);
 
-          // Keep original key (use coerced value where appropriate)
           mappedRow[csvKey] = coerced;
           
           // Try multiple normalizations
@@ -338,7 +343,7 @@ async function loadAllDataAndMerge() {
           mappedRow[normalized3] = coerced;
           mappedRow[normalized4] = coerced;
           
-          // Also try lowercase versions
+          // Try lowercase versions
           mappedRow[csvKey.toLowerCase().trim()] = coerced;
           mappedRow[normalized1.toLowerCase()] = coerced;
         }
@@ -352,11 +357,11 @@ async function loadAllDataAndMerge() {
     SAMPLE_DATA = Array.from(merged.values());
     DATA_LOADED = true;
     LAST_EXTENTS_ALL = null;
-    console.log("✅ Merged countries:", SAMPLE_DATA.length);
+    console.log(" Merged countries:", SAMPLE_DATA.length);
     
     if (SAMPLE_DATA.length > 0) {
       const firstCountry = SAMPLE_DATA[0];
-      console.log("📋 Available columns:", Object.keys(firstCountry).slice(0, 20).sort());
+      console.log("Available columns:", Object.keys(firstCountry).slice(0, 20).sort());
       
       // Check which attributes are missing
       const allAttrKeys = Object.values(ATTRIBUTES)
@@ -364,10 +369,10 @@ async function loadAllDataAndMerge() {
       const missingKeys = allAttrKeys.filter(key => !(key in firstCountry));
       
       if (missingKeys.length > 0) {
-        console.warn("⚠️ Missing attribute keys in merged data:", missingKeys.slice(0, 5));
-        console.warn("💡 Total missing:", missingKeys.length);
+        console.warn("Missing attribute keys in merged data:", missingKeys.slice(0, 5));
+        console.warn("Total missing:", missingKeys.length);
       } else {
-        console.log("✅ All attributes found in data!");
+        console.log("All attributes found in data!");
       }
     }
     
@@ -376,7 +381,7 @@ async function loadAllDataAndMerge() {
     
     initializeCountrySelector();
     
-    // Restore attribute checkboxes if we loaded from cache
+    // Re-applies attribute selection state to the UI after cashe restoration
     if (cached.hasAttributes) {
       document.querySelectorAll('.attribute-checkbox').forEach(checkbox => {
         const key = checkbox.id.replace('attr-', '');
@@ -399,15 +404,14 @@ async function loadAllDataAndMerge() {
     console.error("Failed to load/merge CSV files:", e);
     const results = document.getElementById("country-results");
     if (results) {
-      results.innerHTML = `<div class="loading">❌ Failed to load CSV data.</div>`;
+      results.innerHTML = `<div class="loading"> Failed to load CSV data.</div>`;
     }
   }
 }
 
-// ============================================================================
 // UI INITIALIZATION
-// ============================================================================
 
+// Construct the country selection UI
 function initializeCountrySelector() {
   const container = document.getElementById('country-selector');
   if (!container) {
@@ -415,8 +419,6 @@ function initializeCountrySelector() {
     return;
   }
 
-  // Filter to only allowed countries (already filtered in loadAllDataAndMerge)
-  // Then apply visa filter if active
   let filteredCountries = SAMPLE_DATA;
   
   if (activeVisaFilter !== 'all') {
@@ -435,6 +437,7 @@ function initializeCountrySelector() {
 
   console.log(`Showing ${sortedCountries.length} countries (filter: ${activeVisaFilter})`);
 
+  // Renders the selector UI
   container.innerHTML = `
     <input type="text" 
       id="country-search" 
@@ -496,6 +499,7 @@ function initializeCountrySelector() {
   });
 }
 
+// Renders attribute checkboxes by category
 function initializeAttributes() {
   if (!ATTRIBUTES) {
     console.error("window.ATTRIBUTES is missing");
@@ -543,6 +547,7 @@ function initializeAttributes() {
   setupGroupSelectionButtons();
 }
 
+// Do live filtering of attribute items
 function setupAttributeSearch() {
   const searchInput = document.getElementById('attribute-search');
   if (!searchInput) return;
@@ -569,6 +574,7 @@ function setupAttributeSearch() {
   });
 }
 
+// Wires per-category 'Select All'/'Clear All'
 function setupGroupSelectionButtons() {
   // Select All buttons
   document.querySelectorAll('.group-select-all').forEach(btn => {
@@ -589,6 +595,7 @@ function setupGroupSelectionButtons() {
   });
 }
 
+// Clear attributes for a category or bulk-selects
 function selectGroupAttributes(category, select) {
   const container = document.getElementById(`${category}-attributes`);
   if (!container) return;
@@ -624,6 +631,7 @@ function selectGroupAttributes(category, select) {
   }
 }
 
+// Centralizes attribute selection state changes 
 function toggleAttribute(key, meta, isSelected) {
   if (isSelected) {
     if (selectedAttributes.size >= 10) {
@@ -642,6 +650,7 @@ function toggleAttribute(key, meta, isSelected) {
   saveSelectionsToStorage();
 }
 
+// Shows selected countries as removable tags
 function updateSelectedCountries() {
   const container = document.getElementById('selected-countries');
   if (!container) return;
@@ -675,6 +684,7 @@ function updateSelectedCountries() {
   }
 }
 
+// Shows selected attributes as removable tags
 function updateSelectedTags() {
   const container = document.getElementById('selected-tags');
   if (!container) return;
@@ -705,6 +715,7 @@ function updateSelectedTags() {
   }
 }
 
+// Updates the attribute selection counter display
 function updateSelectedCount() {
   const countEl = document.getElementById('selected-count');
   if (countEl) {
@@ -712,6 +723,7 @@ function updateSelectedCount() {
   }
 }
 
+// Enables/disables the compare action 
 function updateCompareButton() {
   const button = document.getElementById("compare-countries");
   if (!button) return;
@@ -729,10 +741,9 @@ function updateCompareButton() {
   }
 }
 
-// ============================================================================
-// MODE SWITCH (NEW): Compare vs Weights
-// ============================================================================
+// MODE SWITCH: Compare vs Weights
 
+// Switches between Compare mode to Weights mode and other way aroun
 function setMode(mode) {
   CURRENT_MODE = mode;
 
@@ -781,7 +792,7 @@ function setMode(mode) {
   if (resultsHeader) resultsHeader.style.display = "none";
   renderWeightsPage();
 }
-
+// Renders the weights-mode UI
 function renderWeightsPage() {
   const viz = document.getElementById("visualizations-container");
   if (!viz) return;
@@ -863,6 +874,7 @@ function renderWeightsPage() {
   if (runBtn) runBtn.addEventListener("click", () => runRecommendation(dims));
 }
 
+// Computes weighted scores for all countries, select top 3/5 countries and renders supporting visualization
 function runRecommendation(dims) {
   const topk = parseInt(document.getElementById("topk-select")?.value || "5", 10);
 
@@ -924,6 +936,7 @@ function runRecommendation(dims) {
   drawWeightsRadar(avgProfile, topCountries.slice(0, Math.min(3, topCountries.length)), dims, radarSvg);
 }
 
+// Draws a horizontal bar chart of top 3/5 weighted scores
 function drawTopKBarChart(top, svgNode) {
   if (!svgNode) return;
 
@@ -997,6 +1010,7 @@ function drawTopKBarChart(top, svgNode) {
     .text("Weighted score (0–100)");
 }
 
+// Draw a radar graph with average profile and top countries
 function drawWeightsRadar(avgProfile, topCountries, dims, svgNode) {
   if (!svgNode) return;
 
@@ -1121,10 +1135,9 @@ function drawWeightsRadar(avgProfile, topCountries, dims, svgNode) {
   });
 }
 
-// ============================================================================
-// VISUALIZATION - Multiple Chart Types
-// ============================================================================
+// VISUALIZATION
 
+// Resets any weights-mode
 function compareCountries() {
   const weightsList = document.getElementById("weights-list");
   const weightsResults = document.getElementById("weights-results");
@@ -1147,6 +1160,7 @@ function compareCountries() {
   createVisualizations();
 }
 
+// Constructs charts 
 function createVisualizations() {
   const container = document.getElementById('visualizations-container');
   if (!container) {
@@ -1185,11 +1199,11 @@ function createVisualizations() {
   // Check first country's available keys
   if (countries.length > 0) {
     const firstCountry = countries[0];
-    console.log(`📝 Available keys in ${firstCountry.Country}:`, Object.keys(firstCountry).slice(0, 50).sort());
+    console.log(`Available keys in ${firstCountry.Country}:`, Object.keys(firstCountry).slice(0, 50).sort());
     console.log('');
     
     // Check which selected attributes actually exist in the data
-    console.log('✅ Checking attribute presence:');
+    console.log('Checking attribute presence:');
     dims.forEach(d => {
       const value = firstCountry[d.key];
       const exists = d.key in firstCountry;
@@ -1226,7 +1240,7 @@ function createVisualizations() {
       .filter(v => typeof v === "number" && !Number.isNaN(v));
 
     if (vals.length === 0) {
-      console.warn(`❌ NO DATA: "${d.label}" (key: "${d.key}") - not found in any country data`);
+      console.warn(` NO DATA: "${d.label}" (key: "${d.key}") - not found in any country data`);
       extents[d.key] = null;
       continue;
     }
@@ -1249,6 +1263,7 @@ function createVisualizations() {
   }
 }
 
+// Renders a grouped bar chart 
 function createGroupedBarChart(container, countries, dims, extents) {
   const chartDiv = document.createElement('div');
   chartDiv.className = 'chart-card';
@@ -1507,6 +1522,7 @@ function createGroupedBarChart(container, countries, dims, extents) {
   });
 }
 
+// Renders a horizontal bar chart 
 function createBarChart(container, countries, dim, extents) {
   const chartDiv = document.createElement('div');
   chartDiv.className = 'chart-card';
@@ -1679,10 +1695,10 @@ function createBarChart(container, countries, dim, extents) {
     .attr('color', '#64748b');
 }
 
-// ============================================================================
-// CHART INTERACTION - HIGHLIGHT COUNTRIES ACROSS ALL CHARTS
-// ============================================================================
 
+// CHART INTERACTION - HIGHLIGHT COUNTRIES ACROSS ALL CHARTS
+
+// Toggles a single highlighted country and propagates the visual emphasis consistently across all chart types
 function highlightCountryAcrossCharts(countryName) {
   if (highlightedCountry === countryName) {
     // Toggle off if clicking same country
@@ -1813,6 +1829,7 @@ function highlightCountryAcrossCharts(countryName) {
     });
 }
 
+// Create Radar Chart
 function createRadarChart(container, countries, dims, extents) {
   console.log(`Creating radar chart with ${dims.length} attributes:`, dims.map(d => d.label));
   console.log(`Countries:`, countries.map(c => c.Country));
@@ -2141,7 +2158,6 @@ function createParallelCoordinates(container, countries, dims, extents) {
     const words = (d.label || d.key).split(" ");
     label.text("");
     
-    // Aim for 2-3 lines max - distribute words evenly
     const maxWordsPerLine = Math.max(2, Math.ceil(words.length / 3));
     let currentLine = [];
     let lineNumber = 0;
@@ -2263,9 +2279,7 @@ function createParallelCoordinates(container, countries, dims, extents) {
   });
 }
 
-// ============================================================================
 // INITIALIZATION
-// ============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
   initializeAttributes();
